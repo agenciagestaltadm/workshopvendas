@@ -6,61 +6,61 @@
 
 @layer base {
   :root {
-    /* Mês da Mulher - Elegant Feminine Theme */
-    --background: 320 30% 98%;
-    --foreground: 280 60% 15%;
+    /* Workshop de Vendas Online - Tema Verde/Azul-Petróleo SEBRAE */
+    --background: 170 20% 97%;
+    --foreground: 170 60% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 280 60% 15%;
+    --card-foreground: 170 60% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 280 60% 15%;
+    --popover-foreground: 170 60% 15%;
 
-    /* Primary: Deep Purple */
-    --primary: 280 60% 45%;
+    /* Primary: Teal/Verde Petróleo */
+    --primary: 170 70% 35%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft Pink */
-    --secondary: 330 70% 92%;
-    --secondary-foreground: 280 60% 25%;
+    /* Secondary: Verde Claro */
+    --secondary: 140 50% 92%;
+    --secondary-foreground: 170 60% 25%;
 
-    /* Muted: Light lavender */
-    --muted: 280 20% 94%;
-    --muted-foreground: 280 15% 45%;
+    /* Muted: Verde muito claro */
+    --muted: 160 20% 94%;
+    --muted-foreground: 170 15% 45%;
 
-    /* Accent: Vibrant Rose */
-    --accent: 330 85% 60%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent: Verde Limão/Vibrante */
+    --accent: 100 70% 50%;
+    --accent-foreground: 170 60% 15%;
 
-    /* Gold accent */
+    /* Gold/Amarelo para destaques */
     --gold: 45 90% 55%;
     --gold-foreground: 45 90% 20%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 280 20% 88%;
-    --input: 280 20% 88%;
-    --ring: 280 60% 45%;
+    --border: 160 20% 88%;
+    --input: 160 20% 88%;
+    --ring: 170 70% 35%;
 
     --radius: 0.75rem;
 
-    /* Custom gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(280, 60%, 45%) 0%, hsl(330, 85%, 60%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(330, 70%, 95%) 0%, hsl(0, 0%, 100%) 100%);
-    --gradient-cta: linear-gradient(135deg, hsl(280, 70%, 50%) 0%, hsl(330, 85%, 55%) 50%, hsl(45, 90%, 55%) 100%);
-    --gradient-section: linear-gradient(180deg, hsl(320, 30%, 98%) 0%, hsl(330, 50%, 96%) 100%);
+    /* Custom gradients - Tema Verde */
+    --gradient-hero: linear-gradient(135deg, hsl(170, 70%, 35%) 0%, hsl(100, 70%, 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(140, 50%, 95%) 0%, hsl(0, 0%, 100%) 100%);
+    --gradient-cta: linear-gradient(135deg, hsl(170, 70%, 40%) 0%, hsl(100, 70%, 50%) 50%, hsl(45, 90%, 55%) 100%);
+    --gradient-section: linear-gradient(180deg, hsl(170, 20%, 97%) 0%, hsl(140, 30%, 96%) 100%);
 
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(280 60% 45% / 0.15);
-    --shadow-card: 0 8px 30px -8px hsl(280 60% 45% / 0.2);
-    --shadow-cta: 0 8px 25px -5px hsl(330 85% 60% / 0.4);
+    --shadow-soft: 0 4px 20px -4px hsl(170 70% 35% / 0.15);
+    --shadow-card: 0 8px 30px -8px hsl(170 70% 35% / 0.2);
+    --shadow-cta: 0 8px 25px -5px hsl(100 70% 50% / 0.4);
 
-    /* Category colors */
+    /* Category colors - Tema Verde */
     --category-saude: 340 75% 55%;
-    --category-empreendedorismo: 280 60% 50%;
+    --category-empreendedorismo: 170 70% 40%;
     --category-oficina: 200 70% 50%;
-    --category-curso: 45 85% 50%;
+    --category-curso: 100 70% 45%;
     --category-palestra: 160 60% 45%;
 
     --sidebar-background: 0 0% 98%;
@@ -74,26 +74,26 @@
   }
 
   .dark {
-    --background: 280 40% 8%;
-    --foreground: 320 20% 95%;
+    --background: 170 40% 8%;
+    --foreground: 160 20% 95%;
 
-    --card: 280 35% 12%;
-    --card-foreground: 320 20% 95%;
+    --card: 170 35% 12%;
+    --card-foreground: 160 20% 95%;
 
-    --popover: 280 35% 12%;
-    --popover-foreground: 320 20% 95%;
+    --popover: 170 35% 12%;
+    --popover-foreground: 160 20% 95%;
 
-    --primary: 330 70% 65%;
-    --primary-foreground: 280 60% 10%;
+    --primary: 100 70% 55%;
+    --primary-foreground: 170 60% 10%;
 
-    --secondary: 280 30% 20%;
-    --secondary-foreground: 330 70% 85%;
+    --secondary: 170 30% 20%;
+    --secondary-foreground: 100 70% 85%;
 
-    --muted: 280 25% 18%;
-    --muted-foreground: 280 15% 65%;
+    --muted: 170 25% 18%;
+    --muted-foreground: 170 15% 65%;
 
-    --accent: 330 85% 65%;
-    --accent-foreground: 280 60% 10%;
+    --accent: 100 70% 55%;
+    --accent-foreground: 170 60% 10%;
 
     --gold: 45 85% 60%;
     --gold-foreground: 45 90% 15%;
@@ -101,9 +101,9 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 280 25% 22%;
-    --input: 280 25% 22%;
-    --ring: 330 70% 65%;
+    --border: 170 25% 22%;
+    --input: 170 25% 22%;
+    --ring: 100 70% 55%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -198,16 +198,38 @@
 
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    50% { transform: translateY(-12px); }
   }
 
-  .animate-shimmer {
-    animation: shimmer 2s linear infinite;
-    background-size: 200% 100%;
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+    opacity: 0;
   }
 
-  @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

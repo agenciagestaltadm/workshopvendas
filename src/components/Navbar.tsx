@@ -12,9 +12,9 @@ const Navbar = () => {
   return (
     <NavBar
       items={navItems}
-      leadingImageSrc="/Image from Image (13) (1).png"
-      leadingImageAlt="Brasão de Curionópolis"
-      leadingLabel="Mês da Mulher"
+      leadingImageSrc="/Design sem nome - 2026-03-20T153441.627.png"
+      leadingImageAlt="Workshop de Vendas Online"
+      leadingLabel="Workshop Vendas Online"
     />
   );
 };

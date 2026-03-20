@@ -15,10 +15,9 @@ const CoursesSection = () => {
     () =>
       filteredCourses.map((course, index) => {
         const labelDate = format(parseISO(course.data), "d MMM", { locale: ptBR });
-        const labelStart = course.horario.split(' - ')[0]?.replace(':00', 'h') ?? '';
         return {
           id: course.id,
-          label: `${labelDate} · ${labelStart}`,
+          label: `${labelDate} · ${course.facilitador?.split(' ')[0] || 'Curso'}`,
           content: <CourseCard key={course.id} course={course} index={index} />,
         };
       }),
@@ -35,10 +34,10 @@ const CoursesSection = () => {
               Programação Completa
             </span>
             <h2 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-6">
-              Cursos do <span className="text-gradient">Mês da Mulher</span>
+              Módulos do <span className="text-gradient">Workshop</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Confira a programação de <strong className="text-foreground">Empreendedorismo</strong> em Curionópolis.
+              Confira a programação de <strong className="text-foreground">5 módulos práticos</strong> em Parauapebas. Cada módulo aborda uma área essencial para vender online.
             </p>
           </div>
 
@@ -47,7 +46,7 @@ const CoursesSection = () => {
               type="button"
               className="px-4 md:px-6 py-2 md:py-3 rounded-full text-sm md:text-base font-medium transition-all duration-300 bg-gradient-hero text-primary-foreground shadow-cta scale-105"
             >
-              Empreendedorismo
+              Módulos
             </button>
           </div>
 
@@ -57,7 +56,15 @@ const CoursesSection = () => {
 
           {/* Results Count */}
           <div className="text-center mt-8 text-muted-foreground">
-            Exibindo <span className="font-semibold text-foreground">{filteredCourses.length}</span> {filteredCourses.length === 1 ? 'curso' : 'cursos'}
+            Exibindo <span className="font-semibold text-foreground">{filteredCourses.length}</span> {filteredCourses.length === 1 ? 'módulo' : 'módulos'}
+          </div>
+
+          {/* Additional Info */}
+          <div className="mt-12 p-6 bg-muted/50 rounded-2xl border border-border/60 text-center">
+            <p className="text-muted-foreground">
+              <strong className="text-foreground">Importante:</strong> Todos os módulos são gratuitos e acontecem no Sebrae - Parauapebas.{' '}
+              <span className="text-accent font-medium">Traga seu notebook!</span>
+            </p>
           </div>
         </div>
       </div>

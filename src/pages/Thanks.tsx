@@ -40,12 +40,12 @@ const Thanks = () => {
             </div>
             <span className="flex items-center justify-center">
               <img
-                src="/Image from Image (13) (1).png"
-                alt="Brasão de Curionópolis"
-                width={56}
-                height={56}
+                src="/Design sem nome - 2026-03-20T153441.627.png"
+                alt="Workshop de Vendas Online"
+                width={120}
+                height={48}
                 decoding="async"
-                className="h-[48px] w-[48px] object-contain sm:h-[56px] sm:w-[56px]"
+                className="h-[40px] w-auto object-contain sm:h-[48px]"
               />
             </span>
             <div />
@@ -83,7 +83,17 @@ const Thanks = () => {
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            Obrigada por se inscrever! Sua participação foi registrada com sucesso.
+            Obrigado por se inscrever no Workshop de Vendas Online! Sua participação foi registrada com sucesso.
+          </p>
+
+          <p
+            className={[
+              'mt-4 text-sm text-accent font-medium',
+              'transition-all delay-150 duration-700 ease-out motion-reduce:transition-none',
+              isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
+            ].join(' ')}
+          >
+            Não esqueça de trazer seu notebook!
           </p>
 
           {(state.courseName || state.registrationId) && (
@@ -116,6 +126,21 @@ const Thanks = () => {
               )}
             </div>
           )}
+
+          <div
+            className={[
+              'mt-8 p-4 rounded-xl bg-muted/50 border border-border/60',
+              'transition-all delay-300 duration-700 ease-out motion-reduce:transition-none',
+              isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
+            ].join(' ')}
+          >
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Local:</strong> Sebrae - Parauapebas
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Você receberá mais informações por e-mail ou WhatsApp em breve.
+            </p>
+          </div>
         </div>
       </main>
       <Footer />

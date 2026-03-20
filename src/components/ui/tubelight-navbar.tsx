@@ -164,7 +164,7 @@ export function NavBar({
               width={56}
               height={56}
               decoding="async"
-              className="h-[48px] w-[48px] sm:h-[56px] sm:w-[56px] object-contain"
+              className="h-[60px] w-auto sm:h-[72px] object-contain"
             />
           </span>
         ) : (

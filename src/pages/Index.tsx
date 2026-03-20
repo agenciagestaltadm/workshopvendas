@@ -8,9 +8,9 @@ import { InfiniteSlider } from '@/components/ui/infinite-slider';
 
 const Index = () => {
   const sponsors = [
+    { src: '/Logo%20Sebrae%202.png', alt: 'Sebrae' },
     { src: '/GG_logo-BLUE.png', alt: 'Global Gateway' },
     { src: '/AL-INVEST-Verde-400x119.png', alt: 'AL-INVEST Verde' },
-    { src: '/Logo%20Sebrae%202.png', alt: 'Sebrae' },
     { src: '/logoUEportuvertical.jpg.jpeg', alt: 'União Europeia' },
   ];
 
@@ -26,10 +26,10 @@ const Index = () => {
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-10">
                 <h2 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-4">
-                  Realização das
+                  Realização
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Instituições que apoiam e fortalecem essa iniciativa.
+                  Instituições que apoiam e fortalecem esta iniciativa de capacitação em vendas digitais.
                 </p>
               </div>
 

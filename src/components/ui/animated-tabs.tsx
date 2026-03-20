@@ -91,7 +91,7 @@ const AnimatedTabs = ({ tabs = defaultTabs, defaultTab, className }: AnimatedTab
 
   return (
     <div className={cn("flex w-full max-w-lg flex-col gap-y-3", className)}>
-      <div className="relative min-h-[16rem] overflow-hidden rounded-2xl border border-white/10 bg-[#4B0082]/70 px-3 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)] backdrop-blur-sm sm:min-h-[11rem] lg:min-h-[7rem]">
+      <div className="relative min-h-[16rem] overflow-hidden rounded-2xl border border-white/10 bg-[#1B6B6B]/80 px-3 py-4 shadow-[0_12px_30px_rgba(27,107,107,0.35)] backdrop-blur-sm sm:min-h-[11rem] lg:min-h-[7rem]">
         <div className="flex w-full flex-wrap justify-center gap-2">
         {tabs.map((tab) => (
           <button
@@ -105,7 +105,7 @@ const AnimatedTabs = ({ tabs = defaultTabs, defaultTab, className }: AnimatedTab
             {activeTab === tab.id && (
               <motion.div
                 layoutId="active-tab"
-                className="absolute inset-0 !rounded-xl bg-[#2A004B]/85 shadow-[0_12px_24px_rgba(0,0,0,0.25)]"
+                className="absolute inset-0 !rounded-xl bg-[#0D4D4D]/90 shadow-[0_12px_24px_rgba(0,0,0,0.25)]"
                 transition={{ type: "spring", duration: 0.6 }}
               />
             )}
@@ -115,7 +115,7 @@ const AnimatedTabs = ({ tabs = defaultTabs, defaultTab, className }: AnimatedTab
         </div>
       </div>
 
-      <div className="relative min-h-60 h-full overflow-hidden rounded-2xl border border-white/10 bg-[#3A0065]/70 p-5 text-white shadow-[0_16px_36px_rgba(0,0,0,0.25)] backdrop-blur-sm sm:p-6">
+      <div className="relative min-h-60 h-full overflow-hidden rounded-2xl border border-white/10 bg-[#2D8A8A]/80 p-5 text-white shadow-[0_16px_36px_rgba(27,107,107,0.35)] backdrop-blur-sm sm:p-6">
         {tabs.map(
           (tab) =>
             activeTab === tab.id && (

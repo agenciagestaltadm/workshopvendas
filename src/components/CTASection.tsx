@@ -5,14 +5,15 @@ const CTASection = () => {
   const benefits = [
     'Cursos 100% gratuitos',
     'Certificado de participação',
-    'Vagas limitadas'
+    '20 horas de conteúdo',
+    'Traga seu notebook'
   ];
 
   return (
     <section id="inscricao" className="py-20 bg-gradient-hero relative overflow-hidden">
       {/* Decorative circles */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-gold/10 rounded-full -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full translate-x-1/3 translate-y-1/3" />
+      <div className="absolute top-0 left-0 w-64 h-64 bg-accent/10 rounded-full -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gold/10 rounded-full translate-x-1/3 translate-y-1/3" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
@@ -29,7 +30,7 @@ const CTASection = () => {
           {/* Description */}
           <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto leading-relaxed">
             As inscrições são realizadas por formulário online.
-            Clique no botão abaixo para <strong>garantir sua vaga</strong>.
+            Clique no botão abaixo para <strong>garantir sua vaga</strong> no Workshop de Vendas Online em Parauapebas.
           </p>
 
           {/* Benefits */}
@@ -39,7 +40,7 @@ const CTASection = () => {
                 key={index}
                 className="flex items-center gap-2 px-4 py-2 bg-primary-foreground/10 backdrop-blur-sm rounded-full"
               >
-                <CheckCircle className="w-4 h-4 text-gold" />
+                <CheckCircle className="w-4 h-4 text-accent" />
                 <span className="text-sm text-primary-foreground font-medium">{benefit}</span>
               </div>
             ))}
@@ -56,10 +57,10 @@ const CTASection = () => {
 
           {/* Notice */}
           <p className="mt-8 text-sm text-primary-foreground/70">
-            Ao clicar, você será redirecionada para o formulário de inscrição.
+            Ao clicar, você será redirecionado para o formulário de inscrição.
             <br />
             <span className="text-primary-foreground/50">
-              Vagas sujeitas à disponibilidade. Confirmação por e-mail ou WhatsApp.
+              Vagas limitadas. Confirmação por e-mail ou WhatsApp. Não esqueça de trazer seu notebook!
             </span>
           </p>
         </div>

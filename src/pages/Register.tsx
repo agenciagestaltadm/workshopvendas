@@ -41,7 +41,7 @@ type CourseAvailability = {
 const mapRegistrationError = (message: string) => {
   if (message.includes('NO_VACANCIES')) return 'Este curso está com vagas esgotadas.';
   if (message.includes('COURSE_NOT_FOUND')) return 'Curso não encontrado.';
-  if (message.includes('DUPLICATE_REGISTRATION')) return 'Você já está inscrita neste curso.';
+  if (message.includes('DUPLICATE_REGISTRATION')) return 'Você já está inscrito neste curso.';
   return message;
 };
 
@@ -66,12 +66,12 @@ const Register = () => {
   });
 
   const availabilityQuery = useQuery({
-    queryKey: ['course_availability', 'empreendedorismo'],
+    queryKey: ['course_availability', 'vendas-online'],
     enabled: isSupabaseConfigured,
     refetchInterval: 4000,
     queryFn: async () => {
       const supabase = requireSupabase();
-      const { data, error } = await supabase.rpc('get_course_availability', { p_category: 'Empreendedorismo' });
+      const { data, error } = await supabase.rpc('get_course_availability', { p_category: 'Curso' });
 
       if (error) throw error;
       return (data ?? []) as CourseAvailability[];
@@ -149,12 +149,12 @@ const Register = () => {
           <div className="flex w-full items-center justify-between gap-4 rounded-full border border-border/60 bg-background/70 px-2 py-2 shadow-soft backdrop-blur-lg transition-all duration-300">
             <span className="flex items-center justify-center px-4">
               <img
-                src="/Image from Image (13) (1).png"
-                alt="Brasão de Curionópolis"
-                width={56}
-                height={56}
+                src="/Design sem nome - 2026-03-20T153441.627.png"
+                alt="Workshop de Vendas Online"
+                width={120}
+                height={48}
                 decoding="async"
-                className="h-[48px] w-[48px] object-contain sm:h-[56px] sm:w-[56px]"
+                className="h-[40px] w-auto object-contain sm:h-[48px]"
               />
             </span>
             <Button type="button" variant="outline" onClick={handleBack} className="rounded-full px-6">
@@ -168,7 +168,7 @@ const Register = () => {
           <header className="text-center">
             <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl">Inscrição</h1>
             <p className="mt-3 text-muted-foreground">
-              Preencha seus dados e escolha um curso de <strong className="text-foreground">Empreendedorismo</strong>.
+              Preencha seus dados e escolha um curso do <strong className="text-foreground">Workshop de Vendas Online</strong>.
             </p>
           </header>
 
@@ -239,7 +239,7 @@ const Register = () => {
                     name="courseId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Curso (Empreendedorismo)</FormLabel>
+                        <FormLabel>Curso do Workshop</FormLabel>
                         <FormControl>
                           <CourseSelect
                             value={field.value}
