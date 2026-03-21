@@ -46,6 +46,7 @@ type RegistrationRow = {
   name: string;
   email: string;
   phone: string;
+  document: string;
   course_id: string;
   courses?: {
     name?: string;
@@ -116,7 +117,7 @@ const Admin = () => {
       const supabase = requireSupabase();
       const { data, error } = await supabase
         .from('registrations')
-        .select('id,created_at,name,email,phone,course_id,courses(name,starts_at)')
+        .select('id,created_at,name,email,phone,document,course_id,courses(name,starts_at)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as RegistrationRow[];
@@ -126,7 +127,7 @@ const Admin = () => {
   const totalRegistrations = registrationsQuery.data?.length ?? 0;
 
   const empreendedorismo = useMemo(
-    () => (availabilityQuery.data ?? []).filter((row) => row.category === 'Empreendedorismo'),
+    () => (availabilityQuery.data ?? []),
     [availabilityQuery.data],
   );
 
@@ -174,6 +175,7 @@ const Admin = () => {
       name: row.name,
       email: row.email,
       phone: row.phone,
+      document: row.document,
       course:
         (row.courses?.name ?? row.course_id) + (row.courses?.starts_at ? ` (${formatDateTime(row.courses.starts_at)})` : ''),
     }));
@@ -364,6 +366,7 @@ const Admin = () => {
                       <th className="px-5 py-3 font-semibold text-foreground">Nome</th>
                       <th className="px-5 py-3 font-semibold text-foreground">E-mail</th>
                       <th className="px-5 py-3 font-semibold text-foreground">Telefone</th>
+                      <th className="px-5 py-3 font-semibold text-foreground">CPF/CNPJ</th>
                       <th className="px-5 py-3 font-semibold text-foreground">Curso</th>
                       <th className="px-5 py-3 text-right font-semibold text-foreground">Ações</th>
                     </tr>
@@ -375,6 +378,7 @@ const Admin = () => {
                         <td className="px-5 py-3 text-foreground">{row.name}</td>
                         <td className="px-5 py-3 text-muted-foreground">{row.email}</td>
                         <td className="px-5 py-3 text-muted-foreground">{row.phone}</td>
+                        <td className="px-5 py-3 text-muted-foreground">{row.document}</td>
                         <td className="px-5 py-3 text-muted-foreground">
                           {row.courses?.name ?? row.course_id}
                           {row.courses?.starts_at ? ` (${formatDateTime(row.courses.starts_at)})` : ''}
@@ -421,7 +425,7 @@ const Admin = () => {
                     ))}
                     {totalRegistrations === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-5 py-6 text-center text-muted-foreground">
+                        <td colSpan={7} className="px-5 py-6 text-center text-muted-foreground">
                           Nenhuma inscrição registrada ainda.
                         </td>
                       </tr>

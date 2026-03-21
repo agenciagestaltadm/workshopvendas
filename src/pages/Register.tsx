@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { applyPhoneMask } from '@/lib/phone';
+import { applyDocumentMask, isValidDocument } from '@/lib/cpf-cnpj';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Informe seu nome completo'),
@@ -23,6 +24,13 @@ const formSchema = z.object({
   phone: z.string()
     .min(1, 'Telefone é obrigatório')
     .regex(/^\+55 \d{2} \d{5}-\d{4}$/, 'Formato inválido. Use: +55 11 91234-5678'),
+  document: z.string()
+    .min(1, 'CPF/CNPJ é obrigatório')
+    .refine((val) => {
+      const cleaned = val.replace(/\D/g, '');
+      return cleaned.length === 11 || cleaned.length === 14;
+    }, 'Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido')
+    .refine((val) => isValidDocument(val), 'CPF ou CNPJ inválido. Verifique os dígitos informados.'),
   courseId: z.string().min(1, 'Selecione um curso'),
 });
 
@@ -61,6 +69,7 @@ const Register = () => {
       name: '',
       email: '',
       phone: '',
+      document: '',
       courseId: '',
     },
   });
@@ -71,7 +80,7 @@ const Register = () => {
     refetchInterval: 4000,
     queryFn: async () => {
       const supabase = requireSupabase();
-      const { data, error } = await supabase.rpc('get_course_availability', { p_category: 'Curso' });
+      const { data, error } = await supabase.rpc('get_course_availability', {});
 
       if (error) throw error;
       return (data ?? []) as CourseAvailability[];
@@ -111,6 +120,7 @@ const Register = () => {
         p_name: values.name.trim(),
         p_email: values.email.trim(),
         p_phone: values.phone.trim(),
+        p_document: values.document.replace(/\D/g, ''),
         p_course_id: values.courseId,
       };
 
@@ -227,6 +237,29 @@ const Register = () => {
                               field.onChange(masked);
                             }}
                             maxLength={17}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="document"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPF ou CNPJ</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                            autoComplete="off"
+                            {...field}
+                            onChange={(e) => {
+                              const masked = applyDocumentMask(e.target.value);
+                              field.onChange(masked);
+                            }}
+                            maxLength={18}
                           />
                         </FormControl>
                         <FormMessage />

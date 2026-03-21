@@ -5,6 +5,7 @@ export type FullExportRow = {
   name: string;
   email: string;
   phone: string;
+  document: string;
   course: string;
 };
 
@@ -33,8 +34,8 @@ export const buildDisparoXlsxBlob = (rows: Array<{ name: string; phone: string }
 };
 
 export const buildFullWorkbookArrayBuffer = (rows: FullExportRow[]) => {
-  const header = ['Data', 'Nome', 'Email', 'Telefone', 'Curso'];
-  const data = rows.map((row) => [formatDateDDMMYYYY(row.createdAt), row.name, row.email, row.phone, row.course]);
+  const header = ['Data', 'Nome', 'Email', 'Telefone', 'CPF/CNPJ', 'Curso'];
+  const data = rows.map((row) => [formatDateDDMMYYYY(row.createdAt), row.name, row.email, row.phone, row.document, row.course]);
   const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
 
   const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1:A1');
