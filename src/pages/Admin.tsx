@@ -159,17 +159,30 @@ const Admin = () => {
   const availabilityQuery = useQuery({
     queryKey: ['admin_availability'],
     enabled: isAllowed,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     queryFn: async () => {
       const supabase = requireSupabase();
       const { data, error } = await supabase.rpc('get_all_courses_admin', {});
-      if (error) throw error;
-      return (data ?? []) as CourseAvailability[];
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao carregar cursos:', error);
+        }
+        throw new Error('Falha ao carregar cursos. Verifique sua conexão.');
+      }
+      // Log apenas em desenvolvimento
+      if (import.meta.env.DEV) {
+        console.log('[Admin] Cursos carregados:', data?.length ?? 0);
+      }
+      return (data ?? []) as unknown as CourseAvailability[];
     },
   });
 
   const registrationsQuery = useQuery({
     queryKey: ['admin_registrations'],
     enabled: isAllowed,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     queryFn: async () => {
       const supabase = requireSupabase();
       const { data, error } = await supabase
@@ -187,8 +200,17 @@ const Admin = () => {
           )
         `)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as RegistrationRow[];
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao carregar inscrições:', error);
+        }
+        throw new Error('Falha ao carregar inscrições. Verifique sua conexão.');
+      }
+      // Log apenas em desenvolvimento
+      if (import.meta.env.DEV) {
+        console.log('[Admin] Inscrições carregadas:', data?.length ?? 0);
+      }
+      return (data ?? []) as unknown as RegistrationRow[];
     },
   });
 
@@ -219,12 +241,19 @@ const Admin = () => {
         p_course_id: courseId,
         p_new_capacity: capacity,
       });
-      if (error) throw error;
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao atualizar capacidade:', error);
+        }
+        throw new Error(error.message);
+      }
     },
     onSuccess: () => {
       setEditingCourse(null);
       setNewCapacity('');
+      // Invalidar ambas as queries para manter consistência
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      queryClient.invalidateQueries({ queryKey: ['course_availability'] });
       toast({ title: 'Vagas atualizadas', description: 'A capacidade do curso foi atualizada com sucesso.' });
     },
     onError: (err: unknown) => {
@@ -240,10 +269,17 @@ const Admin = () => {
         p_course_id: courseId,
         p_is_active: isActive,
       });
-      if (error) throw error;
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao atualizar status:', error);
+        }
+        throw new Error(error.message);
+      }
     },
     onSuccess: (_, variables) => {
+      // Invalidar ambas as queries para manter consistência entre admin e página de registro
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      queryClient.invalidateQueries({ queryKey: ['course_availability'] });
       toast({
         title: variables.isActive ? 'Curso ativado' : 'Curso pausado',
         description: variables.isActive
@@ -263,11 +299,18 @@ const Admin = () => {
       const { error } = await supabase.rpc('update_all_courses_status', {
         p_is_active: isActive,
       });
-      if (error) throw error;
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao atualizar status global:', error);
+        }
+        throw new Error(error.message);
+      }
     },
     onSuccess: (_, isActive) => {
       setGlobalActionDialog(null);
+      // Invalidar ambas as queries
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      queryClient.invalidateQueries({ queryKey: ['course_availability'] });
       toast({
         title: isActive ? 'Todas as inscrições ativadas' : 'Todas as inscrições pausadas',
         description: isActive
@@ -295,14 +338,35 @@ const Admin = () => {
   const deleteMutation = useMutation({
     mutationFn: async (row: RegistrationRow) => {
       const supabase = requireSupabase();
+      
+      // Primeiro deletar os registros relacionados na tabela registration_courses
+      const { error: relError } = await supabase
+        .from('registration_courses')
+        .delete()
+        .eq('registration_id', row.id);
+      
+      if (relError) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao deletar relacionamentos:', relError);
+        }
+        throw new Error('Falha ao remover cursos da inscrição.');
+      }
+      
+      // Depois deletar o registro principal
       const { error: deleteError } = await supabase.from('registrations').delete().eq('id', row.id);
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        if (import.meta.env.DEV) {
+          console.error('[Admin] Erro ao deletar inscrição:', deleteError);
+        }
+        throw new Error('Falha ao remover inscrição.');
+      }
 
-      const { error: auditError } = await supabase
-        .from('audit_logs')
-        .insert({ action: 'delete_registration', registration_id: row.id, actor_email: ADMIN_EMAIL });
-
-      if (auditError) {
+      // Tentar registrar no audit log (não crítico)
+      try {
+        await supabase
+          .from('audit_logs')
+          .insert({ action: 'delete_registration', registration_id: row.id, actor_email: ADMIN_EMAIL });
+      } catch {
         // Silently ignore audit log errors
       }
     },
@@ -310,6 +374,7 @@ const Admin = () => {
       setDeleteTarget(null);
       await queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
       await queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      await queryClient.invalidateQueries({ queryKey: ['course_availability'] });
       toast({ title: 'Inscrição apagada', description: 'A inscrição foi removida com sucesso.' });
     },
     onError: (err: unknown) => {
@@ -464,6 +529,27 @@ const Admin = () => {
           {/* Seção de Cursos */}
           <section className="mt-10">
             <h2 className="text-lg font-semibold text-foreground">Gerenciar Cursos</h2>
+            
+            {availabilityQuery.isError && (
+              <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
+                <p className="text-sm font-medium text-destructive">Erro ao carregar cursos</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {availabilityQuery.error instanceof Error 
+                    ? availabilityQuery.error.message 
+                    : 'Não foi possível carregar os cursos.'}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => availabilityQuery.refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
+            
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {availabilityQuery.data?.map((course) => {
                 const ratio = course.capacity > 0 ? course.filled / course.capacity : 0;
@@ -615,6 +701,27 @@ const Admin = () => {
             </p>
 
             {/* Lista de Inscrições em Cards Expansíveis */}
+            
+            {registrationsQuery.isError && (
+              <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
+                <p className="text-sm font-medium text-destructive">Erro ao carregar inscrições</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {registrationsQuery.error instanceof Error 
+                    ? registrationsQuery.error.message 
+                    : 'Não foi possível carregar as inscrições.'}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => registrationsQuery.refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
+            
             <div className="mt-4 space-y-3">
               {filteredRegistrations.map((row) => {
                 const courseCount = row.registration_courses?.length ?? 0;

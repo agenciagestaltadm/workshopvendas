@@ -78,12 +78,36 @@ const Register = () => {
   const availabilityQuery = useQuery({
     queryKey: ['course_availability', 'vendas-online'],
     enabled: isSupabaseConfigured,
-    refetchInterval: 4000,
+    refetchInterval: 30000, // Aumentado para 30s para reduzir carga no servidor
+    retry: 3, // Retry automático em caso de falha
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
     queryFn: async () => {
       const supabase = requireSupabase();
+      
+      // Verificar conexão antes de fazer a chamada
+      const { data: healthCheck, error: healthError } = await supabase.from('courses').select('count', { count: 'exact', head: true });
+      
+      if (healthError) {
+        if (import.meta.env.DEV) {
+          console.error('[Register] Erro de conexão:', healthError);
+        }
+        throw new Error('Falha na conexão com o banco de dados. Tente novamente em alguns instantes.');
+      }
+      
       const { data, error } = await supabase.rpc('get_course_availability', {});
 
-      if (error) throw error;
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Register] Erro ao carregar cursos:', error);
+        }
+        throw new Error('Erro ao carregar cursos. Verifique sua conexão e tente novamente.');
+      }
+      
+      // Log para debugging (apenas em desenvolvimento)
+      if (import.meta.env.DEV) {
+        console.log('[Register] Cursos carregados:', data?.length ?? 0);
+      }
+      
       return (data ?? []) as CourseAvailability[];
     },
   });
@@ -271,18 +295,40 @@ const Register = () => {
                       <FormItem>
                         <FormLabel>Cursos do Workshop</FormLabel>
                         <FormControl>
-                          <CourseSelect
-                            selectedIds={field.value}
-                            onSelectionChange={field.onChange}
-                            options={(availabilityQuery.data ?? []).map((course) => ({
-                              course_id: course.course_id,
-                              name: course.name,
-                              starts_at: course.starts_at,
-                              capacity: course.capacity,
-                              remaining: course.remaining,
-                            }))}
-                            disabled={availabilityQuery.isLoading || registerMutation.isPending}
-                          />
+                          {availabilityQuery.isError ? (
+                            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+                              <p className="text-sm text-destructive font-medium">
+                                Erro ao carregar cursos
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {availabilityQuery.error instanceof Error 
+                                  ? availabilityQuery.error.message 
+                                  : 'Não foi possível carregar os cursos. Tente novamente.'}
+                              </p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-3"
+                                onClick={() => availabilityQuery.refetch()}
+                              >
+                                Tentar novamente
+                              </Button>
+                            </div>
+                          ) : (
+                            <CourseSelect
+                              selectedIds={field.value}
+                              onSelectionChange={field.onChange}
+                              options={(availabilityQuery.data ?? []).map((course) => ({
+                                course_id: course.course_id,
+                                name: course.name,
+                                starts_at: course.starts_at,
+                                capacity: course.capacity,
+                                remaining: course.remaining,
+                              }))}
+                              disabled={availabilityQuery.isLoading || registerMutation.isPending}
+                            />
+                          )}
                         </FormControl>
                         <FormMessage />
                         {hasAnySoldOut && (
@@ -297,15 +343,19 @@ const Register = () => {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={registerMutation.isPending || availabilityQuery.isLoading || hasAnySoldOut || selectedCourseIds.length === 0}
+                    disabled={registerMutation.isPending || availabilityQuery.isLoading || availabilityQuery.isError || (availabilityQuery.data?.length === 0) || hasAnySoldOut || selectedCourseIds.length === 0}
                   >
                     {registerMutation.isPending 
                       ? 'Enviando...' 
-                      : hasAnySoldOut 
-                        ? 'Remova cursos lotados' 
-                        : selectedCourseIds.length === 0
-                          ? 'Selecione pelo menos um curso'
-                          : `Confirmar inscrição em ${selectedCourseIds.length} ${selectedCourseIds.length === 1 ? 'curso' : 'cursos'}`
+                      : availabilityQuery.isError
+                        ? 'Erro ao carregar cursos'
+                        : availabilityQuery.data?.length === 0
+                          ? 'Nenhum curso disponível'
+                          : hasAnySoldOut 
+                            ? 'Remova cursos lotados' 
+                            : selectedCourseIds.length === 0
+                              ? 'Selecione pelo menos um curso'
+                              : `Confirmar inscrição em ${selectedCourseIds.length} ${selectedCourseIds.length === 1 ? 'curso' : 'cursos'}`
                     }
                   </Button>
                 </form>

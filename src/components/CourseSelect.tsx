@@ -25,15 +25,17 @@ const getCourseStatus = (remaining: number) => {
   return 'available';
 };
 
-const formatStartsAt = (startsAt: string) => {
+const formatStartsAt = (startsAt: string): { dateLabel: string; timeLabel: string; fullDate: string } => {
   const date = new Date(startsAt);
-  if (Number.isNaN(date.getTime())) return startsAt;
+  if (Number.isNaN(date.getTime())) {
+    return { dateLabel: startsAt, timeLabel: '', fullDate: startsAt };
+  }
   const dateLabel = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
   const timeLabel = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return { dateLabel, timeLabel, fullDate: `${dateLabel} · ${timeLabel}` };
 };
 
-export const CourseSelect = ({ selectedIds, onSelectionChange, options, disabled }: CourseSelectProps) => {
+export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, disabled }: CourseSelectProps) => {
   const byId = useMemo(() => {
     const map = new Map<string, CourseSelectOption>();
     for (const option of options) map.set(option.course_id, option);
@@ -46,7 +48,7 @@ export const CourseSelect = ({ selectedIds, onSelectionChange, options, disabled
     const course = byId.get(courseId);
     if (!course || course.remaining <= 0) return; // Não permite selecionar esgotados
 
-    const isSelected = selectedIds.includes(courseId);
+    const isSelected = selectedIds?.includes(courseId) ?? false;
     if (isSelected) {
       onSelectionChange(selectedIds.filter(id => id !== courseId));
     } else {
