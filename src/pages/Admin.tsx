@@ -333,13 +333,14 @@ const Admin = () => {
   const globalStatusMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
       const supabase = requireSupabase();
-      const { error } = await supabase.rpc('update_all_courses_status', {
-        p_is_active: isActive,
-      });
+      // Usar update direto na tabela em vez de RPC
+      const { error } = await supabase
+        .from('courses')
+        .update({ is_active: isActive })
+        .neq('id', ''); // WHERE id != '' (todos os cursos)
+      
       if (error) {
-        if (import.meta.env.DEV) {
-          console.error('[Admin] Erro ao atualizar status global:', error);
-        }
+        console.error('[Admin] Erro ao atualizar status global:', error);
         throw new Error(error.message);
       }
     },
