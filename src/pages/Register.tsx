@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +14,78 @@ import { toast } from '@/components/ui/use-toast';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { applyPhoneMask } from '@/lib/phone';
 import { applyDocumentMask, isValidDocument } from '@/lib/cpf-cnpj';
+
+// Cursos locais como fallback quando Supabase falhar
+const LOCAL_COURSES = [
+  {
+    course_id: 'workshop-1',
+    name: 'Produtos Digitais e Seus Fornecedores',
+    category: 'Curso',
+    starts_at: '2026-04-06T15:00:00.000Z',
+    capacity: 40,
+    filled: 0,
+    remaining: 40,
+  },
+  {
+    course_id: 'workshop-2',
+    name: 'Páginas de Vendas',
+    category: 'Curso',
+    starts_at: '2026-04-07T15:00:00.000Z',
+    capacity: 40,
+    filled: 0,
+    remaining: 40,
+  },
+  {
+    course_id: 'workshop-3',
+    name: 'Produção de Criativos',
+    category: 'Curso',
+    starts_at: '2026-04-08T15:00:00.000Z',
+    capacity: 40,
+    filled: 0,
+    remaining: 40,
+  },
+  {
+    course_id: 'workshop-4',
+    name: 'Gestão de Tráfego Pago',
+    category: 'Curso',
+    starts_at: '2026-04-09T15:00:00.000Z',
+    capacity: 40,
+    filled: 0,
+    remaining: 40,
+  },
+  {
+    course_id: 'workshop-5',
+    name: 'Técnicas de Vendas',
+    category: 'Curso',
+    starts_at: '2026-04-10T15:00:00.000Z',
+    capacity: 40,
+    filled: 0,
+    remaining: 40,
+  },
+];
+
+const USE_LOCAL_FALLBACK = true; // Habilitar fallback local quando Supabase falhar
+
+const STORAGE_KEY = 'workshop_courses_backup'; // Chave para salvar backup dos cursos no localStorage
+
+// Salvar cursos no localStorage
+const saveCoursesToStorage = (courses: typeof LOCAL_COURSES) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+  } catch (e) {
+    // Silenciar erro
+  }
+};
+
+// Carregar cursos do localStorage
+const loadCoursesFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    return null;
+  }
+};
 
 const formSchema = z.object({
   name: z.string().min(2, 'Informe seu nome completo'),
@@ -77,38 +149,52 @@ const Register = () => {
 
   const availabilityQuery = useQuery({
     queryKey: ['course_availability', 'vendas-online'],
-    enabled: isSupabaseConfigured,
-    refetchInterval: 30000, // Aumentado para 30s para reduzir carga no servidor
-    retry: 3, // Retry automático em caso de falha
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    enabled: true, // Sempre habilitado, mesmo sem Supabase configurado
+    refetchInterval: 30000,
+    retry: 1,
+    retryDelay: 1000,
     queryFn: async () => {
-      const supabase = requireSupabase();
-      
-      // Verificar conexão antes de fazer a chamada
-      const { data: healthCheck, error: healthError } = await supabase.from('courses').select('count', { count: 'exact', head: true });
-      
-      if (healthError) {
-        if (import.meta.env.DEV) {
-          console.error('[Register] Erro de conexão:', healthError);
-        }
-        throw new Error('Falha na conexão com o banco de dados. Tente novamente em alguns instantes.');
+      // Tentar carregar do localStorage primeiro
+      const storedCourses = loadCoursesFromStorage();
+      if (storedCourses && storedCourses.length > 0) {
+        return storedCourses as CourseAvailability[];
       }
-      
-      const { data, error } = await supabase.rpc('get_course_availability', {});
 
-      if (error) {
-        if (import.meta.env.DEV) {
-          console.error('[Register] Erro ao carregar cursos:', error);
+      // Se Supabase não estiver configurado, usar fallback local imediatamente
+      if (!isSupabaseConfigured) {
+        return LOCAL_COURSES as CourseAvailability[];
+      }
+
+      try {
+        const supabase = requireSupabase();
+        const { data, error } = await supabase.rpc('get_course_availability', {});
+
+        if (error) {
+          throw error;
         }
-        throw new Error('Erro ao carregar cursos. Verifique sua conexão e tente novamente.');
+        
+        const courses = (data ?? []) as CourseAvailability[];
+        
+        // Salvar no localStorage como backup
+        if (courses.length > 0) {
+          saveCoursesToStorage(courses);
+        } else {
+          // Se retornou vazio, usar cursos locais
+          return LOCAL_COURSES as CourseAvailability[];
+        }
+        
+        if (import.meta.env.DEV) {
+          console.log('[Register] Cursos carregados do Supabase:', courses.length);
+        }
+        
+        return courses;
+      } catch (error) {
+        // Se falhar, usar cursos locais como fallback
+        if (import.meta.env.DEV) {
+          console.log('[Register] Erro no Supabase, usando cursos locais:', error);
+        }
+        return LOCAL_COURSES as CourseAvailability[];
       }
-      
-      // Log para debugging (apenas em desenvolvimento)
-      if (import.meta.env.DEV) {
-        console.log('[Register] Cursos carregados:', data?.length ?? 0);
-      }
-      
-      return (data ?? []) as CourseAvailability[];
     },
   });
 

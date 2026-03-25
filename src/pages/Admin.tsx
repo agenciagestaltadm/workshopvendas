@@ -16,7 +16,10 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  X
+  X,
+  Plus,
+  Calendar,
+  Clock
 } from 'lucide-react';
 
 import Footer from '@/components/Footer';
@@ -117,6 +120,19 @@ const Admin = () => {
   // Estados para edição de curso
   const [editingCourse, setEditingCourse] = useState<CourseAvailability | null>(null);
   const [newCapacity, setNewCapacity] = useState('');
+
+  // Estados para CRUD de cursos
+  const [isCourseFormOpen, setIsCourseFormOpen] = useState(false);
+  const [editingCourseData, setEditingCourseData] = useState<CourseAvailability | null>(null);
+  const [courseFormData, setCourseFormData] = useState({
+    id: '',
+    name: '',
+    category: 'Curso',
+    starts_at: '',
+    capacity: '40',
+    is_active: true,
+  });
+  const [deleteCourseTarget, setDeleteCourseTarget] = useState<CourseAvailability | null>(null);
 
   // Estados para controle global
   const [globalActionDialog, setGlobalActionDialog] = useState<null | 'pause' | 'resume'>(null);
@@ -383,6 +399,142 @@ const Admin = () => {
     },
   });
 
+  // Mutações para CRUD de cursos
+  const createCourseMutation = useMutation({
+    mutationFn: async (courseData: typeof courseFormData) => {
+      const supabase = requireSupabase();
+      const { error } = await supabase
+        .from('courses')
+        .insert({
+          id: courseData.id,
+          name: courseData.name,
+          category: courseData.category,
+          starts_at: new Date(courseData.starts_at).toISOString(),
+          capacity: parseInt(courseData.capacity, 10),
+          is_active: courseData.is_active,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setIsCourseFormOpen(false);
+      resetCourseForm();
+      queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      queryClient.invalidateQueries({ queryKey: ['course_availability'] });
+      toast({ title: 'Curso criado', description: 'O curso foi criado com sucesso.' });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Erro ao criar curso', description: message, variant: 'destructive' });
+    },
+  });
+
+  const updateCourseMutation = useMutation({
+    mutationFn: async (courseData: typeof courseFormData & { originalId: string }) => {
+      const supabase = requireSupabase();
+      const { error } = await supabase
+        .from('courses')
+        .update({
+          id: courseData.id,
+          name: courseData.name,
+          category: courseData.category,
+          starts_at: new Date(courseData.starts_at).toISOString(),
+          capacity: parseInt(courseData.capacity, 10),
+          is_active: courseData.is_active,
+        })
+        .eq('id', courseData.originalId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setIsCourseFormOpen(false);
+      setEditingCourseData(null);
+      resetCourseForm();
+      queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      queryClient.invalidateQueries({ queryKey: ['course_availability'] });
+      toast({ title: 'Curso atualizado', description: 'O curso foi atualizado com sucesso.' });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Erro ao atualizar curso', description: message, variant: 'destructive' });
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      const supabase = requireSupabase();
+      
+      // Primeiro verificar se há inscrições neste curso
+      const { count, error: countError } = await supabase
+        .from('registration_courses')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', courseId);
+      
+      if (countError) throw countError;
+      
+      if (count && count > 0) {
+        throw new Error(`Não é possível excluir: existem ${count} inscrição(ões) neste curso.`);
+      }
+      
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', courseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setDeleteCourseTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      queryClient.invalidateQueries({ queryKey: ['course_availability'] });
+      toast({ title: 'Curso excluído', description: 'O curso foi removido com sucesso.' });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Não foi possível excluir', description: message, variant: 'destructive' });
+    },
+  });
+
+  const resetCourseForm = () => {
+    setCourseFormData({
+      id: '',
+      name: '',
+      category: 'Curso',
+      starts_at: '',
+      capacity: '40',
+      is_active: true,
+    });
+  };
+
+  const openCreateCourseForm = () => {
+    resetCourseForm();
+    setEditingCourseData(null);
+    setIsCourseFormOpen(true);
+  };
+
+  const openEditCourseForm = (course: CourseAvailability) => {
+    setCourseFormData({
+      id: course.course_id,
+      name: course.name,
+      category: course.category,
+      starts_at: course.starts_at.slice(0, 16), // Format for datetime-local input
+      capacity: course.capacity.toString(),
+      is_active: course.is_active,
+    });
+    setEditingCourseData(course);
+    setIsCourseFormOpen(true);
+  };
+
+  const handleSaveCourse = () => {
+    if (!courseFormData.id || !courseFormData.name || !courseFormData.starts_at) {
+      toast({ title: 'Dados incompletos', description: 'Preencha todos os campos obrigatórios.', variant: 'destructive' });
+      return;
+    }
+
+    if (editingCourseData) {
+      updateCourseMutation.mutate({ ...courseFormData, originalId: editingCourseData.course_id });
+    } else {
+      createCourseMutation.mutate(courseFormData);
+    }
+  };
+
   const exportRows = useMemo(() => {
     return (registrationsQuery.data ?? []).map((row) => {
       const courses = row.registration_courses
@@ -528,7 +680,13 @@ const Admin = () => {
 
           {/* Seção de Cursos */}
           <section className="mt-10">
-            <h2 className="text-lg font-semibold text-foreground">Gerenciar Cursos</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h2 className="text-lg font-semibold text-foreground">Gerenciar Cursos</h2>
+              <Button onClick={openCreateCourseForm} className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Curso
+              </Button>
+            </div>
             
             {availabilityQuery.isError && (
               <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
@@ -647,6 +805,28 @@ const Admin = () => {
                             Ativar
                           </>
                         )}
+                      </Button>
+                    </div>
+
+                    {/* Botões de Editar e Excluir */}
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => openEditCourseForm(course)}
+                      >
+                        <Edit3 className="mr-1.5 h-4 w-4" />
+                        Editar Curso
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => setDeleteCourseTarget(course)}
+                      >
+                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        Excluir
                       </Button>
                     </div>
                   </div>
@@ -939,6 +1119,135 @@ const Admin = () => {
               disabled={!deleteTarget || deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Apagando...' : 'Apagar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Formulário de Curso (Criar/Editar) */}
+      <Dialog open={isCourseFormOpen} onOpenChange={setIsCourseFormOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingCourseData ? 'Editar Curso' : 'Novo Curso'}</DialogTitle>
+            <DialogDescription>
+              {editingCourseData 
+                ? 'Atualize as informações do curso existente.' 
+                : 'Preencha as informações para criar um novo curso.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="course-id">ID do Curso *</Label>
+              <Input
+                id="course-id"
+                placeholder="ex: workshop-1"
+                value={courseFormData.id}
+                onChange={(e) => setCourseFormData({ ...courseFormData, id: e.target.value })}
+                className="mt-1"
+                disabled={!!editingCourseData}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Identificador único do curso (não pode ser alterado depois)
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="course-name">Nome do Curso *</Label>
+              <Input
+                id="course-name"
+                placeholder="Nome do curso"
+                value={courseFormData.name}
+                onChange={(e) => setCourseFormData({ ...courseFormData, name: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="course-category">Categoria</Label>
+              <Input
+                id="course-category"
+                placeholder="Categoria"
+                value={courseFormData.category}
+                onChange={(e) => setCourseFormData({ ...courseFormData, category: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="course-date">Data e Hora de Início *</Label>
+              <Input
+                id="course-date"
+                type="datetime-local"
+                value={courseFormData.starts_at}
+                onChange={(e) => setCourseFormData({ ...courseFormData, starts_at: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="course-capacity">Capacidade (vagas)</Label>
+              <Input
+                id="course-capacity"
+                type="number"
+                min="1"
+                value={courseFormData.capacity}
+                onChange={(e) => setCourseFormData({ ...courseFormData, capacity: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="course-active"
+                checked={courseFormData.is_active}
+                onCheckedChange={(checked) => setCourseFormData({ ...courseFormData, is_active: checked })}
+              />
+              <Label htmlFor="course-active">Curso ativo (aceitando inscrições)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCourseFormOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveCourse}
+              disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
+            >
+              {createCourseMutation.isPending || updateCourseMutation.isPending 
+                ? 'Salvando...' 
+                : editingCourseData ? 'Atualizar' : 'Criar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão de Curso */}
+      <AlertDialog open={Boolean(deleteCourseTarget)} onOpenChange={(open) => !open && setDeleteCourseTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir curso</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente. O curso será removido e não poderá ser recuperado.
+              {deleteCourseTarget && deleteCourseTarget.filled > 0 && (
+                <span className="block mt-2 text-destructive font-medium">
+                  Atenção: Este curso possui {deleteCourseTarget.filled} inscrição(ões). 
+                  Você precisa remover todas as inscrições antes de excluir o curso.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteCourseTarget && (
+            <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
+              <p className="font-semibold text-foreground">{deleteCourseTarget.name}</p>
+              <p className="mt-1 text-muted-foreground">{formatDateTime(deleteCourseTarget.starts_at)}</p>
+              <p className="mt-1 text-muted-foreground">
+                {deleteCourseTarget.filled} inscritos / {deleteCourseTarget.capacity} vagas
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteCourseMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteCourseTarget && deleteCourseMutation.mutate(deleteCourseTarget.course_id)}
+              disabled={!deleteCourseTarget || deleteCourseMutation.isPending || (deleteCourseTarget?.filled ?? 0) > 0}
+            >
+              {deleteCourseMutation.isPending ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
