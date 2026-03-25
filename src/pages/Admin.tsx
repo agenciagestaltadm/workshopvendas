@@ -813,13 +813,18 @@ const Admin = () => {
                         size="sm"
                         className="flex-1"
                         onClick={() => {
-                          console.log('[Admin] Toggle status - course:', course);
-                          console.log('[Admin] course_id:', course.course_id);
-                          if (!course.course_id) {
+                          const courseId = course.course_id;
+                          const newStatus = !course.is_active;
+                          
+                          if (!courseId) {
                             toast({ title: 'Erro', description: 'ID do curso não encontrado', variant: 'destructive' });
                             return;
                           }
-                          toggleCourseStatusMutation.mutate({ courseId: course.course_id, isActive: !course.is_active });
+                          
+                          toggleCourseStatusMutation.mutate({ 
+                            courseId: courseId, 
+                            isActive: newStatus 
+                          });
                         }}
                         disabled={toggleCourseStatusMutation.isPending || !course.course_id}
                       >
