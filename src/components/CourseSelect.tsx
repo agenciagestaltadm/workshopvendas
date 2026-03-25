@@ -1,10 +1,8 @@
-import { useMemo, useState } from 'react';
-import { Info } from 'lucide-react';
+import { useMemo } from 'react';
+import { Check, Calendar, Users } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type CourseSelectOption = {
   course_id: string;
@@ -15,10 +13,9 @@ export type CourseSelectOption = {
 };
 
 type CourseSelectProps = {
-  value?: string;
-  onValueChange: (value: string) => void;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
   options: CourseSelectOption[];
-  placeholder?: string;
   disabled?: boolean;
 };
 
@@ -33,148 +30,140 @@ const formatStartsAt = (startsAt: string) => {
   if (Number.isNaN(date.getTime())) return startsAt;
   const dateLabel = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
   const timeLabel = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  return `${dateLabel} · ${timeLabel}`;
+  return { dateLabel, timeLabel, fullDate: `${dateLabel} · ${timeLabel}` };
 };
 
-const ProgressBar = ({ value }: { value: number }) => (
-  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
-    <div className="h-full rounded-full bg-current transition-[width] duration-500 ease-out" style={{ width: `${value}%` }} />
-  </div>
-);
-
-export const CourseSelect = ({ value, onValueChange, options, placeholder = 'Selecione um curso', disabled }: CourseSelectProps) => {
-  const [open, setOpen] = useState(false);
-
+export const CourseSelect = ({ selectedIds, onSelectionChange, options, disabled }: CourseSelectProps) => {
   const byId = useMemo(() => {
     const map = new Map<string, CourseSelectOption>();
     for (const option of options) map.set(option.course_id, option);
     return map;
   }, [options]);
 
-  const selected = value ? byId.get(value) : undefined;
-  const status = selected ? getCourseStatus(selected.remaining) : null;
-  const filled = selected ? Math.min(100, Math.max(0, ((selected.capacity - selected.remaining) / Math.max(1, selected.capacity)) * 100)) : 0;
+  const toggleCourse = (courseId: string) => {
+    if (disabled) return;
+    
+    const course = byId.get(courseId);
+    if (!course || course.remaining <= 0) return; // Não permite selecionar esgotados
 
-  const triggerTone =
-    status === 'sold_out'
-      ? 'border-destructive/60 ring-destructive/30 text-destructive'
-      : status === 'last_spots'
-        ? 'border-amber-500/50 ring-amber-500/30 text-amber-700'
-        : 'border-input text-foreground';
+    const isSelected = selectedIds.includes(courseId);
+    if (isSelected) {
+      onSelectionChange(selectedIds.filter(id => id !== courseId));
+    } else {
+      onSelectionChange([...selectedIds, courseId]);
+    }
+  };
 
   return (
-    <Select value={value} onValueChange={onValueChange} open={open} onOpenChange={setOpen} disabled={disabled}>
-      <SelectTrigger
-        className={cn(
-          'relative h-auto items-stretch gap-3 px-4 py-3 pr-12 text-left transition-colors duration-200',
-          'hover:border-primary/40',
-          'focus-visible:ring-2 focus-visible:ring-ring/40',
-          '[&>svg]:absolute [&>svg]:right-4 [&>svg]:top-4 [&>svg]:opacity-60',
-          '[&>svg]:transition-transform [&>svg]:duration-200 data-[state=open]:[&>svg]:rotate-180',
-          triggerTone,
-        )}
-        aria-label="Seleção de curso"
-      >
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          {!selected ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 text-sm text-muted-foreground">{placeholder}</div>
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="line-clamp-2 text-sm font-semibold text-foreground">{selected.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{formatStartsAt(selected.starts_at)}</div>
-                </div>
-
-                <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:flex-col sm:items-end sm:justify-start">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          className={cn(
-                            'border-transparent',
-                            status === 'sold_out' && 'bg-destructive text-destructive-foreground',
-                            status === 'last_spots' && 'bg-amber-500 text-black',
-                            status === 'available' && 'bg-emerald-600 text-white',
-                          )}
-                        >
-                          {status === 'sold_out' ? 'Esgotado' : status === 'last_spots' ? 'Últimas vagas' : 'Disponível'}
-                        </Badge>
-                        <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {status === 'sold_out'
-                        ? 'Curso lotado. Escolha outro.'
-                        : 'Vagas restantes atualizam automaticamente.'}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <div className={cn('text-xs font-medium', status === 'sold_out' ? 'text-destructive' : 'text-muted-foreground')}>
-                    {selected.remaining}/{selected.capacity} vagas
-                  </div>
-                  <span className="sr-only">
-                    {status === 'sold_out'
-                      ? 'Curso esgotado'
-                      : `${selected.remaining} vagas restantes de ${selected.capacity}`}
-                  </span>
-                </div>
-              </div>
-
-              <div className={cn(status === 'sold_out' ? 'text-destructive' : status === 'last_spots' ? 'text-amber-600' : 'text-emerald-600')}>
-                <ProgressBar value={filled} />
-              </div>
-            </>
-          )}
-        </div>
-      </SelectTrigger>
-
-      <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] p-2">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {options.map((course) => {
-          const itemStatus = getCourseStatus(course.remaining);
-          const itemFilled = Math.min(100, Math.max(0, ((course.capacity - course.remaining) / Math.max(1, course.capacity)) * 100));
-          const disabledItem = course.remaining <= 0;
+          const isSelected = selectedIds.includes(course.course_id);
+          const status = getCourseStatus(course.remaining);
+          const isSoldOut = status === 'sold_out';
+          const { fullDate } = formatStartsAt(course.starts_at);
+          
           return (
-            <SelectItem
+            <button
               key={course.course_id}
-              value={course.course_id}
-              disabled={disabledItem}
-              className={cn('rounded-lg py-3 pr-3', disabledItem && 'opacity-60')}
+              type="button"
+              onClick={() => toggleCourse(course.course_id)}
+              disabled={disabled || isSoldOut}
+              className={cn(
+                'relative rounded-xl border-2 p-4 text-left transition-all duration-200',
+                'hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isSelected 
+                  ? 'border-[#7ED321] bg-[#7ED321]/10 shadow-md' 
+                  : 'border-border bg-card hover:border-[#7ED321]/50',
+                (disabled || isSoldOut) && 'cursor-not-allowed opacity-60 grayscale',
+                isSoldOut && 'border-destructive/30'
+              )}
             >
-              <div className="flex w-full min-w-0 flex-col gap-2">
-                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="line-clamp-2 text-sm font-medium text-foreground">{course.name}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{formatStartsAt(course.starts_at)}</div>
-                  </div>
-
-                  <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:flex-col sm:items-end sm:justify-start">
-                    <Badge
-                      className={cn(
-                        'border-transparent',
-                        itemStatus === 'sold_out' && 'bg-destructive text-destructive-foreground',
-                        itemStatus === 'last_spots' && 'bg-amber-500 text-black',
-                        itemStatus === 'available' && 'bg-emerald-600 text-white',
-                      )}
-                    >
-                      {itemStatus === 'sold_out' ? 'Esgotado' : itemStatus === 'last_spots' ? 'Últimas vagas' : 'Disponível'}
-                    </Badge>
-                    <div className={cn('text-xs font-medium', itemStatus === 'sold_out' ? 'text-destructive' : 'text-muted-foreground')}>
-                      {course.remaining}/{course.capacity}
-                    </div>
-                  </div>
+              {/* Checkmark quando selecionado */}
+              {isSelected && (
+                <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#7ED321] text-white shadow-sm">
+                  <Check className="h-4 w-4" />
                 </div>
+              )}
 
-                <div className={cn(itemStatus === 'sold_out' ? 'text-destructive' : itemStatus === 'last_spots' ? 'text-amber-600' : 'text-emerald-600')}>
-                  <ProgressBar value={itemFilled} />
-                </div>
+              {/* Badge de status */}
+              <div className="mb-3">
+                <Badge
+                  className={cn(
+                    'border-transparent text-xs',
+                    status === 'sold_out' && 'bg-destructive text-destructive-foreground',
+                    status === 'last_spots' && 'bg-amber-500 text-black',
+                    status === 'available' && 'bg-emerald-600 text-white'
+                  )}
+                >
+                  {status === 'sold_out' 
+                    ? 'Esgotado' 
+                    : status === 'last_spots' 
+                      ? `Últimas ${course.remaining} vagas` 
+                      : `${course.remaining} vagas`
+                  }
+                </Badge>
               </div>
-            </SelectItem>
+
+              {/* Nome do curso */}
+              <h4 className={cn(
+                'mb-2 text-sm font-semibold leading-tight',
+                isSelected ? 'text-foreground' : 'text-foreground'
+              )}>
+                {course.name}
+              </h4>
+
+              {/* Data e hora */}
+              <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{fullDate}</span>
+              </div>
+
+              {/* Capacidade */}
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                <span>{course.remaining}/{course.capacity} vagas restantes</span>
+              </div>
+
+              {/* Barra de progresso */}
+              {!isSoldOut && (
+                <div className="mt-3">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div 
+                      className={cn(
+                        'h-full rounded-full transition-all duration-500',
+                        status === 'last_spots' ? 'bg-amber-500' : 'bg-[#7ED321]'
+                      )}
+                      style={{ 
+                        width: `${Math.min(100, ((course.capacity - course.remaining) / course.capacity) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </button>
           );
         })}
-      </SelectContent>
-    </Select>
+      </div>
+
+      {/* Mensagem quando não há cursos */}
+      {options.length === 0 && (
+        <div className="rounded-xl border border-border bg-card p-6 text-center">
+          <p className="text-sm text-muted-foreground">Nenhum curso disponível no momento.</p>
+        </div>
+      )}
+
+      {/* Resumo da seleção */}
+      {selectedIds.length > 0 && (
+        <div className="rounded-xl border border-[#7ED321]/30 bg-[#7ED321]/5 p-4">
+          <p className="text-sm font-medium text-foreground">
+            {selectedIds.length} {selectedIds.length === 1 ? 'curso selecionado' : 'cursos selecionados'}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Clique nos cards acima para adicionar ou remover cursos da sua inscrição.
+          </p>
+        </div>
+      )}
+    </div>
   );
 };

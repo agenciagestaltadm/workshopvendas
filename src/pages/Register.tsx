@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,7 +31,7 @@ const formSchema = z.object({
       return cleaned.length === 11 || cleaned.length === 14;
     }, 'Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido')
     .refine((val) => isValidDocument(val), 'CPF ou CNPJ inválido. Verifique os dígitos informados.'),
-  courseId: z.string().min(1, 'Selecione um curso'),
+  courseIds: z.array(z.string()).min(1, 'Selecione pelo menos um curso'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,9 +47,10 @@ type CourseAvailability = {
 };
 
 const mapRegistrationError = (message: string) => {
-  if (message.includes('NO_VACANCIES')) return 'Este curso está com vagas esgotadas.';
+  if (message.includes('NO_VACANCIES')) return 'Um ou mais cursos selecionados estão com vagas esgotadas.';
   if (message.includes('COURSE_NOT_FOUND')) return 'Curso não encontrado.';
-  if (message.includes('DUPLICATE_REGISTRATION')) return 'Você já está inscrito neste curso.';
+  if (message.includes('DUPLICATE_REGISTRATION')) return 'Você já está inscrito em um dos cursos selecionados.';
+  if (message.includes('NO_COURSES_SELECTED')) return 'Selecione pelo menos um curso.';
   return message;
 };
 
@@ -70,7 +71,7 @@ const Register = () => {
       email: '',
       phone: '',
       document: '',
-      courseId: '',
+      courseIds: [],
     },
   });
 
@@ -95,23 +96,13 @@ const Register = () => {
     return map;
   }, [availabilityQuery.data]);
 
-  const selectedCourseId = form.watch('courseId');
-  const selectedCourse = selectedCourseId ? availabilityById.get(selectedCourseId) : undefined;
-  const isSelectedSoldOut = Boolean(selectedCourse && selectedCourse.remaining <= 0);
-
-  useEffect(() => {
-    if (!selectedCourseId) return;
-    if (!selectedCourse) return;
-
-    if (selectedCourse.remaining <= 0) {
-      form.setError('courseId', { message: 'Este curso está lotado. Escolha outro.' });
-      return;
-    }
-
-    if (form.formState.errors.courseId?.message === 'Este curso está lotado. Escolha outro.') {
-      form.clearErrors('courseId');
-    }
-  }, [form, selectedCourse, selectedCourseId]);
+  const selectedCourseIds = form.watch('courseIds');
+  
+  const selectedCourses = useMemo(() => {
+    return selectedCourseIds.map(id => availabilityById.get(id)).filter(Boolean) as CourseAvailability[];
+  }, [selectedCourseIds, availabilityById]);
+  
+  const hasAnySoldOut = selectedCourses.some(c => c.remaining <= 0);
 
   const registerMutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -121,22 +112,28 @@ const Register = () => {
         p_email: values.email.trim(),
         p_phone: values.phone.trim(),
         p_document: values.document.replace(/\D/g, ''),
-        p_course_id: values.courseId,
+        p_course_ids: values.courseIds,
       };
 
-      const { data, error } = await supabase.rpc('register_participant', payload);
+      const { data, error } = await supabase.rpc('register_participant_with_courses', payload);
       if (error) throw error;
       return String(data);
     },
     onSuccess: (registrationId, values) => {
-      const selected = availabilityById.get(values.courseId);
+      const courses = values.courseIds.map(id => {
+        const course = availabilityById.get(id);
+        return {
+          id,
+          name: course?.name ?? '',
+          startsAt: course?.starts_at ?? '',
+        };
+      });
+      
       navigate('/obrigado', {
         state: {
           registrationId,
           name: values.name.trim(),
-          courseId: values.courseId,
-          courseName: selected?.name ?? '',
-          startsAt: selected?.starts_at ?? '',
+          courses,
         },
       });
     },
@@ -174,11 +171,11 @@ const Register = () => {
         </div>
       </header>
       <main className="container mx-auto px-4 pb-16 pt-32 sm:pt-36">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-4xl">
           <header className="text-center">
             <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl">Inscrição</h1>
             <p className="mt-3 text-muted-foreground">
-              Preencha seus dados e escolha um curso do <strong className="text-foreground">Workshop de Vendas Online</strong>.
+              Preencha seus dados e escolha os cursos do <strong className="text-foreground">Workshop de Vendas Online</strong>.
             </p>
           </header>
 
@@ -269,14 +266,14 @@ const Register = () => {
 
                   <FormField
                     control={form.control}
-                    name="courseId"
+                    name="courseIds"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Curso do Workshop</FormLabel>
+                        <FormLabel>Cursos do Workshop</FormLabel>
                         <FormControl>
                           <CourseSelect
-                            value={field.value}
-                            onValueChange={field.onChange}
+                            selectedIds={field.value}
+                            onSelectionChange={field.onChange}
                             options={(availabilityQuery.data ?? []).map((course) => ({
                               course_id: course.course_id,
                               name: course.name,
@@ -284,19 +281,13 @@ const Register = () => {
                               capacity: course.capacity,
                               remaining: course.remaining,
                             }))}
-                            placeholder={
-                              availabilityQuery.isLoading
-                                ? 'Carregando cursos...'
-                                : availabilityQuery.isError
-                                  ? 'Erro ao carregar cursos'
-                                  : 'Selecione um curso'
-                            }
+                            disabled={availabilityQuery.isLoading || registerMutation.isPending}
                           />
                         </FormControl>
                         <FormMessage />
-                        {isSelectedSoldOut && (
+                        {hasAnySoldOut && (
                           <p className="text-sm font-medium text-destructive" aria-live="polite">
-                            Este curso está lotado. Escolha outro para continuar.
+                            Um ou mais cursos selecionados estão lotados. Remova-os para continuar.
                           </p>
                         )}
                       </FormItem>
@@ -306,15 +297,22 @@ const Register = () => {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={registerMutation.isPending || availabilityQuery.isLoading || isSelectedSoldOut}
+                    disabled={registerMutation.isPending || availabilityQuery.isLoading || hasAnySoldOut || selectedCourseIds.length === 0}
                   >
-                    {registerMutation.isPending ? 'Enviando...' : isSelectedSoldOut ? 'Curso lotado' : 'Fazer inscrição'}
+                    {registerMutation.isPending 
+                      ? 'Enviando...' 
+                      : hasAnySoldOut 
+                        ? 'Remova cursos lotados' 
+                        : selectedCourseIds.length === 0
+                          ? 'Selecione pelo menos um curso'
+                          : `Confirmar inscrição em ${selectedCourseIds.length} ${selectedCourseIds.length === 1 ? 'curso' : 'cursos'}`
+                    }
                   </Button>
                 </form>
               </Form>
 
               <p className="mt-6 text-center text-xs text-muted-foreground">
-                As vagas são verificadas no momento do envio. Se o curso lotar, sua inscrição não será salva.
+                As vagas são verificadas no momento do envio. Se algum curso lotar, sua inscrição não será salva.
               </p>
             </div>
           )}

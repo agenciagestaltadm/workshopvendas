@@ -1,15 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Calendar, MapPin } from 'lucide-react';
 
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 
+type CourseInfo = {
+  id: string;
+  name: string;
+  startsAt: string;
+};
+
 type ThanksState = {
   registrationId?: string;
   name?: string;
-  courseName?: string;
-  startsAt?: string;
+  courses?: CourseInfo[];
+};
+
+const formatDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('pt-BR', { 
+    dateStyle: 'short', 
+    timeStyle: 'short' 
+  });
 };
 
 const Thanks = () => {
@@ -22,6 +36,9 @@ const Thanks = () => {
     const id = window.requestAnimationFrame(() => setIsReady(true));
     return () => window.cancelAnimationFrame(id);
   }, []);
+
+  const courses = state.courses ?? [];
+  const hasCourses = courses.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -96,7 +113,7 @@ const Thanks = () => {
             Não esqueça de trazer seu notebook!
           </p>
 
-          {(state.courseName || state.registrationId) && (
+          {(hasCourses || state.registrationId) && (
             <div
               className={[
                 'mt-10 rounded-2xl border border-border bg-card p-6 text-left shadow-soft',
@@ -109,18 +126,38 @@ const Thanks = () => {
                   Nome: <span className="font-semibold text-foreground">{state.name}</span>
                 </p>
               )}
-              {state.courseName && (
-                <p className={state.name ? 'mt-2 text-sm text-muted-foreground' : 'text-sm text-muted-foreground'}>
-                  Curso: <span className="font-semibold text-foreground">{state.courseName}</span>
-                </p>
+
+              {hasCourses && (
+                <div className={state.name ? 'mt-4' : ''}>
+                  <p className="text-sm font-medium text-foreground mb-3">
+                    {courses.length === 1 ? 'Curso selecionado:' : `${courses.length} cursos selecionados:`}
+                  </p>
+                  <div className="space-y-3">
+                    {courses.map((course, index) => (
+                      <div 
+                        key={course.id} 
+                        className="rounded-lg border border-border/60 bg-muted/30 p-3"
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#7ED321]/20 text-[#7ED321] text-xs font-bold">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{course.name}</p>
+                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {formatDateTime(course.startsAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-              {state.startsAt && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Data/Hora: <span className="font-semibold text-foreground">{state.startsAt}</span>
-                </p>
-              )}
+
               {state.registrationId && (
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-4 text-sm text-muted-foreground pt-4 border-t border-border/60">
                   Protocolo: <span className="font-semibold text-foreground">{state.registrationId}</span>
                 </p>
               )}
@@ -134,10 +171,11 @@ const Thanks = () => {
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <MapPin className="h-4 w-4" />
               <strong className="text-foreground">Local:</strong> Sebrae - Parauapebas
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-2">
               Você receberá mais informações por e-mail ou WhatsApp em breve.
             </p>
           </div>
