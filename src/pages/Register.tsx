@@ -116,6 +116,7 @@ type CourseAvailability = {
   capacity: number;
   filled: number;
   remaining: number;
+  is_active?: boolean; // Adicionado para indicar se o curso está ativo
 };
 
 const mapRegistrationError = (message: string) => {
@@ -444,7 +445,14 @@ const Register = () => {
                     name="courseIds"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cursos do Workshop</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Cursos do Workshop</FormLabel>
+                          {availabilityQuery.isFetching && (
+                            <span className="text-xs text-muted-foreground animate-pulse">
+                              Atualizando...
+                            </span>
+                          )}
+                        </div>
                         <FormControl>
                           {availabilityQuery.isError ? (
                             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">

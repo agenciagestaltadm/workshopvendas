@@ -197,7 +197,8 @@ RETURNS TABLE (
     starts_at TIMESTAMPTZ,
     capacity INTEGER,
     filled BIGINT,
-    remaining BIGINT
+    remaining BIGINT,
+    is_active BOOLEAN
 )
 LANGUAGE SQL
 STABLE
@@ -210,11 +211,11 @@ AS $$
         c.starts_at,
         c.capacity,
         COUNT(rc.id) as filled,
-        GREATEST(0, c.capacity - COUNT(rc.id)) as remaining
+        GREATEST(0, c.capacity - COUNT(rc.id)) as remaining,
+        c.is_active
     FROM public.courses c
     LEFT JOIN public.registration_courses rc ON c.id = rc.course_id
-    WHERE c.is_active = TRUE
-    GROUP BY c.id, c.name, c.category, c.starts_at, c.capacity
+    GROUP BY c.id, c.name, c.category, c.starts_at, c.capacity, c.is_active
     ORDER BY c.starts_at;
 $$;
 

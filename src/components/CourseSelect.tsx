@@ -10,6 +10,7 @@ export type CourseSelectOption = {
   starts_at: string;
   capacity: number;
   remaining: number;
+  is_active?: boolean; // Adicionado para indicar se inscrições estão abertas
 };
 
 type CourseSelectProps = {
@@ -46,7 +47,8 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
     if (disabled) return;
     
     const course = byId.get(courseId);
-    if (!course || course.remaining <= 0) return; // Não permite selecionar esgotados
+    // Não permite selecionar esgotados ou pausados
+    if (!course || course.remaining <= 0 || course.is_active === false) return;
 
     const isSelected = selectedIds?.includes(courseId) ?? false;
     if (isSelected) {
@@ -63,6 +65,7 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
           const isSelected = selectedIds.includes(course.course_id);
           const status = getCourseStatus(course.remaining);
           const isSoldOut = status === 'sold_out';
+          const isPaused = course.is_active === false;
           const { fullDate } = formatStartsAt(course.starts_at);
           
           return (
@@ -70,15 +73,16 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
               key={course.course_id}
               type="button"
               onClick={() => toggleCourse(course.course_id)}
-              disabled={disabled || isSoldOut}
+              disabled={disabled || isSoldOut || isPaused}
               className={cn(
                 'relative rounded-xl border-2 p-4 text-left transition-all duration-200',
                 'hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isSelected 
                   ? 'border-[#7ED321] bg-[#7ED321]/10 shadow-md' 
                   : 'border-border bg-card hover:border-[#7ED321]/50',
-                (disabled || isSoldOut) && 'cursor-not-allowed opacity-60 grayscale',
-                isSoldOut && 'border-destructive/30'
+                (disabled || isSoldOut || isPaused) && 'cursor-not-allowed opacity-60',
+                isSoldOut && 'border-destructive/30',
+                isPaused && 'border-gray-400 bg-gray-100'
               )}
             >
               {/* Checkmark quando selecionado */}
@@ -93,16 +97,19 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
                 <Badge
                   className={cn(
                     'border-transparent text-xs',
-                    status === 'sold_out' && 'bg-destructive text-destructive-foreground',
-                    status === 'last_spots' && 'bg-amber-500 text-black',
-                    status === 'available' && 'bg-emerald-600 text-white'
+                    isPaused && 'bg-gray-500 text-white',
+                    !isPaused && status === 'sold_out' && 'bg-destructive text-destructive-foreground',
+                    !isPaused && status === 'last_spots' && 'bg-amber-500 text-black',
+                    !isPaused && status === 'available' && 'bg-emerald-600 text-white'
                   )}
                 >
-                  {status === 'sold_out' 
-                    ? 'Esgotado' 
-                    : status === 'last_spots' 
-                      ? `Últimas ${course.remaining} vagas` 
-                      : `${course.remaining} vagas`
+                  {isPaused
+                    ? 'Inscrições Pausadas'
+                    : status === 'sold_out'
+                      ? 'Esgotado'
+                      : status === 'last_spots'
+                        ? `Últimas ${course.remaining} vagas`
+                        : `${course.remaining} vagas`
                   }
                 </Badge>
               </div>
