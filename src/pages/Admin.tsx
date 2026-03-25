@@ -298,10 +298,13 @@ const Admin = () => {
       console.log('[Admin] Alterando status do curso:', { courseId, isActive });
       
       const supabase = requireSupabase();
-      const { data, error } = await supabase.rpc('update_course_status', {
-        p_course_id: courseId,
-        p_is_active: isActive,
-      });
+      
+      // Usar update direto na tabela em vez de RPC
+      const { data, error } = await supabase
+        .from('courses')
+        .update({ is_active: isActive })
+        .eq('id', courseId)
+        .select();
       
       if (error) {
         console.error('[Admin] Erro ao atualizar status:', error);
@@ -809,8 +812,16 @@ const Admin = () => {
                         variant={course.is_active ? 'destructive' : 'default'}
                         size="sm"
                         className="flex-1"
-                        onClick={() => toggleCourseStatusMutation.mutate({ courseId: course.course_id, isActive: !course.is_active })}
-                        disabled={toggleCourseStatusMutation.isPending}
+                        onClick={() => {
+                          console.log('[Admin] Toggle status - course:', course);
+                          console.log('[Admin] course_id:', course.course_id);
+                          if (!course.course_id) {
+                            toast({ title: 'Erro', description: 'ID do curso não encontrado', variant: 'destructive' });
+                            return;
+                          }
+                          toggleCourseStatusMutation.mutate({ courseId: course.course_id, isActive: !course.is_active });
+                        }}
+                        disabled={toggleCourseStatusMutation.isPending || !course.course_id}
                       >
                         {course.is_active ? (
                           <>
