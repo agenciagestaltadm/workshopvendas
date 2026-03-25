@@ -186,11 +186,22 @@ const Admin = () => {
         }
         throw new Error('Falha ao carregar cursos. Verifique sua conexão.');
       }
+      
+      // Remover duplicatas baseado no course_id
+      const uniqueCourses = new Map<string, CourseAvailability>();
+      (data ?? []).forEach((course: CourseAvailability) => {
+        if (!uniqueCourses.has(course.course_id)) {
+          uniqueCourses.set(course.course_id, course);
+        }
+      });
+      
+      const result = Array.from(uniqueCourses.values());
+      
       // Log apenas em desenvolvimento
       if (import.meta.env.DEV) {
-        console.log('[Admin] Cursos carregados:', data?.length ?? 0);
+        console.log('[Admin] Cursos carregados:', result.length, '(após remover duplicatas)');
       }
-      return (data ?? []) as unknown as CourseAvailability[];
+      return result;
     },
   });
 

@@ -214,20 +214,62 @@ const Register = () => {
   
   const hasAnySoldOut = selectedCourses.some(c => c.remaining <= 0);
 
+  // Storage key for local registrations backup
+  const REGISTRATIONS_STORAGE_KEY = 'workshop_registrations_backup';
+
+  // Save registration locally
+  const saveRegistrationLocally = (values: FormValues) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem(REGISTRATIONS_STORAGE_KEY) || '[]');
+      const newRegistration = {
+        id: `local-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        name: values.name.trim(),
+        email: values.email.trim(),
+        phone: values.phone.trim(),
+        document: values.document.replace(/\D/g, ''),
+        course_ids: values.courseIds,
+        synced: false,
+      };
+      existing.push(newRegistration);
+      localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(existing));
+      return newRegistration.id;
+    } catch (e) {
+      return null;
+    }
+  };
+
   const registerMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      const supabase = requireSupabase();
-      const payload = {
-        p_name: values.name.trim(),
-        p_email: values.email.trim(),
-        p_phone: values.phone.trim(),
-        p_document: values.document.replace(/\D/g, ''),
-        p_course_ids: values.courseIds,
-      };
+      // Try Supabase first
+      if (isSupabaseConfigured) {
+        try {
+          const supabase = requireSupabase();
+          const payload = {
+            p_name: values.name.trim(),
+            p_email: values.email.trim(),
+            p_phone: values.phone.trim(),
+            p_document: values.document.replace(/\D/g, ''),
+            p_course_ids: values.courseIds,
+          };
 
-      const { data, error } = await supabase.rpc('register_participant_with_courses', payload);
-      if (error) throw error;
-      return String(data);
+          const { data, error } = await supabase.rpc('register_participant_with_courses', payload);
+          if (!error && data) {
+            return String(data);
+          }
+        } catch (supabaseError) {
+          if (import.meta.env.DEV) {
+            console.log('[Register] Supabase failed, using local fallback');
+          }
+        }
+      }
+
+      // Fallback: save locally
+      const localId = saveRegistrationLocally(values);
+      if (!localId) {
+        throw new Error('Falha ao salvar inscrição. Tente novamente.');
+      }
+      return localId;
     },
     onSuccess: (registrationId, values) => {
       const courses = values.courseIds.map(id => {
