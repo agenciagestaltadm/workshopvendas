@@ -291,17 +291,24 @@ const Admin = () => {
 
   const toggleCourseStatusMutation = useMutation({
     mutationFn: async ({ courseId, isActive }: { courseId: string; isActive: boolean }) => {
+      if (!courseId || courseId.trim() === '') {
+        throw new Error('ID do curso não pode ser vazio');
+      }
+      
+      console.log('[Admin] Alterando status do curso:', { courseId, isActive });
+      
       const supabase = requireSupabase();
-      const { error } = await supabase.rpc('update_course_status', {
+      const { data, error } = await supabase.rpc('update_course_status', {
         p_course_id: courseId,
         p_is_active: isActive,
       });
+      
       if (error) {
-        if (import.meta.env.DEV) {
-          console.error('[Admin] Erro ao atualizar status:', error);
-        }
+        console.error('[Admin] Erro ao atualizar status:', error);
         throw new Error(error.message);
       }
+      
+      console.log('[Admin] Status atualizado com sucesso:', data);
     },
     onSuccess: (_, variables) => {
       // Invalidar ambas as queries para manter consistência entre admin e página de registro
