@@ -120,10 +120,19 @@ type CourseAvailability = {
 
 const mapRegistrationError = (message: string) => {
   if (message.includes('NO_VACANCIES')) return 'Um ou mais cursos selecionados estão com vagas esgotadas.';
-  if (message.includes('COURSE_NOT_FOUND')) return 'Curso não encontrado.';
+  if (message.includes('COURSE_NOT_FOUND')) return 'Curso não encontrado. Por favor, atualize a página e tente novamente.';
+  if (message.includes('COURSE_INACTIVE')) return 'As inscrições para um dos cursos estão pausadas.';
   if (message.includes('DUPLICATE_REGISTRATION')) return 'Você já está inscrito em um dos cursos selecionados.';
   if (message.includes('NO_COURSES_SELECTED')) return 'Selecione pelo menos um curso.';
-  return message;
+  if (message.includes('INVALID_NAME')) return 'Nome inválido. Digite seu nome completo.';
+  if (message.includes('INVALID_EMAIL')) return 'E-mail inválido. Verifique o formato.';
+  if (message.includes('permission denied') || message.includes('violates row-level')) {
+    return 'Erro de permissão no servidor. Entre em contato com o suporte.';
+  }
+  if (message.includes('schema') || message.includes('function')) {
+    return 'Erro no banco de dados. Execute o script de correção no Supabase.';
+  }
+  return message || 'Erro ao processar inscrição. Tente novamente.';
 };
 
 const Register = () => {
@@ -247,24 +256,38 @@ const Register = () => {
           const supabase = requireSupabase();
           const payload = {
             p_name: values.name.trim(),
-            p_email: values.email.trim(),
+            p_email: values.email.trim().toLowerCase(),
             p_phone: values.phone.trim(),
             p_document: values.document.replace(/\D/g, ''),
             p_course_ids: values.courseIds,
           };
 
+          console.log('[Register] Enviando para Supabase:', payload);
+
           const { data, error } = await supabase.rpc('register_participant_with_courses', payload);
-          if (!error && data) {
+          
+          if (error) {
+            console.error('[Register] Erro do Supabase:', error);
+            throw new Error(error.message || 'Erro ao salvar no banco de dados');
+          }
+          
+          if (data) {
+            console.log('[Register] Sucesso! ID:', data);
             return String(data);
           }
+          
+          throw new Error('Resposta vazia do servidor');
         } catch (supabaseError) {
-          if (import.meta.env.DEV) {
-            console.log('[Register] Supabase failed, using local fallback');
+          console.error('[Register] Erro na chamada Supabase:', supabaseError);
+          // Não usar fallback local em produção - mostrar erro real
+          if (supabaseError instanceof Error) {
+            throw supabaseError;
           }
+          throw new Error('Falha ao conectar com o servidor. Tente novamente.');
         }
       }
 
-      // Fallback: save locally
+      // Fallback local apenas se Supabase não estiver configurado
       const localId = saveRegistrationLocally(values);
       if (!localId) {
         throw new Error('Falha ao salvar inscrição. Tente novamente.');
