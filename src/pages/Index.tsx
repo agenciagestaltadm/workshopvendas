@@ -10,7 +10,7 @@ const Index = () => {
   const sponsors = [
     { src: '/Logo%20Sebrae%202.png', alt: 'Sebrae' },
     { src: '/GG_logo-BLUE.png', alt: 'Global Gateway' },
-    { src: '/AL-INVEST-Verde-400x119.png', alt: 'AL-INVEST Verde' },
+    { src: '/alinvestverdecorrigida.PNG', alt: 'AL-INVEST Verde' },
     { src: '/logoUEportuvertical.jpg.jpeg', alt: 'União Europeia' },
   ];
 
