@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.courses (
     name TEXT NOT NULL,
     category TEXT DEFAULT 'Curso',
     starts_at TIMESTAMPTZ NOT NULL,
-    capacity INTEGER NOT NULL DEFAULT 40,
+    capacity INTEGER NOT NULL DEFAULT 20,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -22,11 +22,11 @@ ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 -- 4. Inserir ou atualizar cursos (usando UPSERT)
 INSERT INTO public.courses (id, name, category, starts_at, capacity, is_active)
 VALUES 
-    ('workshop-1', 'Produtos Digitais e Seus Fornecedores', 'Curso', '2026-04-06 15:00:00+00', 40, TRUE),
-    ('workshop-2', 'Páginas de Vendas', 'Curso', '2026-04-07 15:00:00+00', 40, TRUE),
-    ('workshop-3', 'Produção de Criativos', 'Curso', '2026-04-08 15:00:00+00', 40, TRUE),
-    ('workshop-4', 'Gestão de Tráfego Pago', 'Curso', '2026-04-09 15:00:00+00', 40, TRUE),
-    ('workshop-5', 'Técnicas de Vendas', 'Curso', '2026-04-10 15:00:00+00', 40, TRUE)
+    ('workshop-1', 'Produtos Digitais e Seus Fornecedores', 'Curso', '2026-04-06 14:00:00+00', 20, TRUE),
+    ('workshop-2', 'Páginas de Vendas', 'Curso', '2026-04-07 14:00:00+00', 20, TRUE),
+    ('workshop-3', 'Produção de Criativos', 'Curso', '2026-04-08 14:00:00+00', 20, TRUE),
+    ('workshop-4', 'Gestão de Tráfego Pago', 'Curso', '2026-04-09 14:00:00+00', 20, TRUE),
+    ('workshop-5', 'Técnicas de Vendas', 'Curso', '2026-04-10 14:00:00+00', 20, TRUE)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     category = EXCLUDED.category,

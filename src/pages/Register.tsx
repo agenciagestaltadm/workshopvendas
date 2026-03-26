@@ -15,78 +15,6 @@ import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { applyPhoneMask } from '@/lib/phone';
 import { applyDocumentMask, isValidDocument } from '@/lib/cpf-cnpj';
 
-// Cursos locais como fallback quando Supabase falhar
-const LOCAL_COURSES = [
-  {
-    course_id: 'workshop-1',
-    name: 'Produtos Digitais e Seus Fornecedores',
-    category: 'Curso',
-    starts_at: '2026-04-06T15:00:00.000Z',
-    capacity: 40,
-    filled: 0,
-    remaining: 40,
-  },
-  {
-    course_id: 'workshop-2',
-    name: 'Páginas de Vendas',
-    category: 'Curso',
-    starts_at: '2026-04-07T15:00:00.000Z',
-    capacity: 40,
-    filled: 0,
-    remaining: 40,
-  },
-  {
-    course_id: 'workshop-3',
-    name: 'Produção de Criativos',
-    category: 'Curso',
-    starts_at: '2026-04-08T15:00:00.000Z',
-    capacity: 40,
-    filled: 0,
-    remaining: 40,
-  },
-  {
-    course_id: 'workshop-4',
-    name: 'Gestão de Tráfego Pago',
-    category: 'Curso',
-    starts_at: '2026-04-09T15:00:00.000Z',
-    capacity: 40,
-    filled: 0,
-    remaining: 40,
-  },
-  {
-    course_id: 'workshop-5',
-    name: 'Técnicas de Vendas',
-    category: 'Curso',
-    starts_at: '2026-04-10T15:00:00.000Z',
-    capacity: 40,
-    filled: 0,
-    remaining: 40,
-  },
-];
-
-const USE_LOCAL_FALLBACK = true; // Habilitar fallback local quando Supabase falhar
-
-const STORAGE_KEY = 'workshop_courses_backup'; // Chave para salvar backup dos cursos no localStorage
-
-// Salvar cursos no localStorage
-const saveCoursesToStorage = (courses: typeof LOCAL_COURSES) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
-  } catch (e) {
-    // Silenciar erro
-  }
-};
-
-// Carregar cursos do localStorage
-const loadCoursesFromStorage = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch (e) {
-    return null;
-  }
-};
-
 const formSchema = z.object({
   name: z.string().min(2, 'Informe seu nome completo'),
   email: z.string()
@@ -138,6 +66,7 @@ const mapRegistrationError = (message: string) => {
 
 const Register = () => {
   const navigate = useNavigate();
+  
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -159,52 +88,25 @@ const Register = () => {
 
   const availabilityQuery = useQuery({
     queryKey: ['course_availability', 'vendas-online'],
-    enabled: true, // Sempre habilitado, mesmo sem Supabase configurado
-    refetchInterval: 30000,
-    retry: 1,
-    retryDelay: 1000,
+    enabled: true,
+    refetchInterval: 30000, // Atualiza a cada 30 segundos
+    retry: 3,
+    retryDelay: 2000,
     queryFn: async () => {
-      // Tentar carregar do localStorage primeiro
-      const storedCourses = loadCoursesFromStorage();
-      if (storedCourses && storedCourses.length > 0) {
-        return storedCourses as CourseAvailability[];
-      }
+      const supabase = requireSupabase();
+      const { data, error } = await supabase.rpc('get_course_availability', {});
 
-      // Se Supabase não estiver configurado, usar fallback local imediatamente
-      if (!isSupabaseConfigured) {
-        return LOCAL_COURSES as CourseAvailability[];
+      if (error) {
+        throw error;
       }
-
-      try {
-        const supabase = requireSupabase();
-        const { data, error } = await supabase.rpc('get_course_availability', {});
-
-        if (error) {
-          throw error;
-        }
-        
-        const courses = (data ?? []) as CourseAvailability[];
-        
-        // Salvar no localStorage como backup
-        if (courses.length > 0) {
-          saveCoursesToStorage(courses);
-        } else {
-          // Se retornou vazio, usar cursos locais
-          return LOCAL_COURSES as CourseAvailability[];
-        }
-        
-        if (import.meta.env.DEV) {
-          console.log('[Register] Cursos carregados do Supabase:', courses.length);
-        }
-        
-        return courses;
-      } catch (error) {
-        // Se falhar, usar cursos locais como fallback
-        if (import.meta.env.DEV) {
-          console.log('[Register] Erro no Supabase, usando cursos locais:', error);
-        }
-        return LOCAL_COURSES as CourseAvailability[];
+      
+      const courses = (data ?? []) as CourseAvailability[];
+      
+      if (import.meta.env.DEV) {
+        console.log('[Register] Cursos carregados do Supabase:', courses.length);
       }
+      
+      return courses;
     },
   });
 

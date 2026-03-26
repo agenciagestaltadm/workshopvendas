@@ -129,8 +129,11 @@ const Admin = () => {
     name: '',
     category: 'Curso',
     starts_at: '',
-    capacity: '40',
+    capacity: '20',
     is_active: true,
+    description: '',
+    location: 'Sebrae - Parauapebas',
+    facilitator: '',
   });
   const [deleteCourseTarget, setDeleteCourseTarget] = useState<CourseAvailability | null>(null);
 
@@ -453,30 +456,38 @@ const Admin = () => {
   const updateCourseMutation = useMutation({
     mutationFn: async (courseData: typeof courseFormData & { originalId: string }) => {
       const supabase = requireSupabase();
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('courses')
         .update({
-          id: courseData.id,
           name: courseData.name,
           category: courseData.category,
           starts_at: new Date(courseData.starts_at).toISOString(),
           capacity: parseInt(courseData.capacity, 10),
           is_active: courseData.is_active,
         })
-        .eq('id', courseData.originalId);
+        .eq('id', courseData.originalId)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Nenhum registro foi atualizado. Verifique se o curso existe.');
+      }
+      return data;
     },
     onSuccess: () => {
       setIsCourseFormOpen(false);
       setEditingCourseData(null);
       resetCourseForm();
+      // Invalidar queries para atualizar UI
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
       queryClient.invalidateQueries({ queryKey: ['course_availability'] });
-      toast({ title: 'Curso atualizado', description: 'O curso foi atualizado com sucesso.' });
+      // Forçar refetch imediato para sincronização em tempo real
+      queryClient.refetchQueries({ queryKey: ['admin_availability'], exact: false });
+      queryClient.refetchQueries({ queryKey: ['course_availability'], exact: false });
+      toast({ title: '✅ Curso atualizado', description: 'As alterações foram salvas e já estão visíveis para os usuários.' });
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Erro inesperado';
-      toast({ title: 'Erro ao atualizar curso', description: message, variant: 'destructive' });
+      toast({ title: '❌ Erro ao atualizar curso', description: message, variant: 'destructive' });
     },
   });
 
@@ -520,8 +531,11 @@ const Admin = () => {
       name: '',
       category: 'Curso',
       starts_at: '',
-      capacity: '40',
+      capacity: '20',
       is_active: true,
+      description: '',
+      location: 'Sebrae - Parauapebas',
+      facilitator: '',
     });
   };
 
@@ -539,15 +553,50 @@ const Admin = () => {
       starts_at: course.starts_at.slice(0, 16), // Format for datetime-local input
       capacity: course.capacity.toString(),
       is_active: course.is_active,
+      description: '',
+      location: 'Sebrae - Parauapebas',
+      facilitator: '',
     });
     setEditingCourseData(course);
     setIsCourseFormOpen(true);
   };
 
   const handleSaveCourse = () => {
-    if (!courseFormData.id || !courseFormData.name || !courseFormData.starts_at) {
-      toast({ title: 'Dados incompletos', description: 'Preencha todos os campos obrigatórios.', variant: 'destructive' });
+    // Validação de campos obrigatórios
+    if (!courseFormData.id?.trim()) {
+      toast({ title: 'ID do curso obrigatório', description: 'Informe um identificador único para o curso.', variant: 'destructive' });
       return;
+    }
+    if (!courseFormData.name?.trim()) {
+      toast({ title: 'Nome do curso obrigatório', description: 'Informe o nome do curso.', variant: 'destructive' });
+      return;
+    }
+    if (!courseFormData.starts_at) {
+      toast({ title: 'Data/hora obrigatória', description: 'Selecione a data e hora de início do curso.', variant: 'destructive' });
+      return;
+    }
+
+    // Validação de capacidade
+    const capacity = parseInt(courseFormData.capacity, 10);
+    if (isNaN(capacity) || capacity < 1) {
+      toast({ title: 'Capacidade inválida', description: 'A capacidade deve ser um número maior que 0.', variant: 'destructive' });
+      return;
+    }
+
+    // Validação de data
+    const startDate = new Date(courseFormData.starts_at);
+    if (isNaN(startDate.getTime())) {
+      toast({ title: 'Data inválida', description: 'Selecione uma data e hora válidas.', variant: 'destructive' });
+      return;
+    }
+
+    // Validação de ID em criação (não permitir duplicados)
+    if (!editingCourseData) {
+      const existingCourse = availabilityQuery.data?.find(c => c.course_id === courseFormData.id.trim());
+      if (existingCourse) {
+        toast({ title: 'ID já existe', description: 'Já existe um curso com este identificador.', variant: 'destructive' });
+        return;
+      }
     }
 
     if (editingCourseData) {

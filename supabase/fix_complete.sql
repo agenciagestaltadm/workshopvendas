@@ -62,12 +62,12 @@ ORDER BY starts_at;
 
 -- Inserir cursos padrão se a tabela estiver vazia ou incompleta
 INSERT INTO public.courses (id, name, category, starts_at, capacity, is_active)
-VALUES 
-    ('workshop-1', 'Produtos Digitais e Seus Fornecedores', 'Curso', '2026-04-06 15:00:00+00', 40, TRUE),
-    ('workshop-2', 'Páginas de Vendas', 'Curso', '2026-04-07 15:00:00+00', 40, TRUE),
-    ('workshop-3', 'Produção de Criativos', 'Curso', '2026-04-08 15:00:00+00', 40, TRUE),
-    ('workshop-4', 'Gestão de Tráfego Pago', 'Curso', '2026-04-09 15:00:00+00', 40, TRUE),
-    ('workshop-5', 'Técnicas de Vendas', 'Curso', '2026-04-10 15:00:00+00', 40, TRUE)
+VALUES
+    ('workshop-1', 'Produtos Digitais e Seus Fornecedores', 'Curso', '2026-04-06 14:00:00+00', 20, TRUE),
+    ('workshop-2', 'Páginas de Vendas', 'Curso', '2026-04-07 14:00:00+00', 20, TRUE),
+    ('workshop-3', 'Produção de Criativos', 'Curso', '2026-04-08 14:00:00+00', 20, TRUE),
+    ('workshop-4', 'Gestão de Tráfego Pago', 'Curso', '2026-04-09 14:00:00+00', 20, TRUE),
+    ('workshop-5', 'Técnicas de Vendas', 'Curso', '2026-04-10 14:00:00+00', 20, TRUE)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     category = EXCLUDED.category,
