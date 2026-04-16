@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, Calendar, MapPin, ChefHat } from 'lucide-react';
+import { ArrowDown, ChefHat } from 'lucide-react';
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -34,17 +34,7 @@ const HeroSection = () => {
             </span>
           </div>
 
-          {/* Title */}
-          <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight animate-fade-in tracking-tight" style={{ animationDelay: '0.2s' }}>
-            <span className="text-slate-800">CANAÃ</span>
-            <span className="block text-blue-500 mt-1 text-2xl md:text-3xl tracking-wider font-semibold">GASTRONOMIA</span>
-            <span className="block text-slate-400 mt-1 text-xl md:text-2xl font-medium">2026</span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-slate-500 font-medium animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            21 a 23 de Abril · Canaã dos Carajás - PA
-          </p>
+          {/* Title - apenas logo, sem texto */}
 
           {/* Description */}
           <p className="text-base text-slate-500 max-w-xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
@@ -52,16 +42,8 @@ const HeroSection = () => {
             Cursos práticos de trufas, chocolates e bolos com a chef Istefanny Cardoso.
           </p>
 
-          {/* Event Info Cards */}
+          {/* Event Info */}
           <div className="flex flex-wrap justify-center gap-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200 shadow-sm">
-              <MapPin className="w-4 h-4 text-blue-500" />
-              <span className="text-slate-600 text-sm font-medium">Canaã dos Carajás - PA</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200 shadow-sm">
-              <Calendar className="w-4 h-4 text-blue-500" />
-              <span className="text-slate-600 text-sm font-medium">21 a 23 de Abril</span>
-            </div>
             <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200 shadow-sm">
               <ChefHat className="w-4 h-4 text-blue-500" />
               <span className="text-slate-600 text-sm font-medium">8h por curso</span>

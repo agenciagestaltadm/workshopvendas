@@ -1,27 +1,27 @@
 import { useEffect, useRef } from 'react';
-import { Clock, MapPin, Monitor, Calendar } from 'lucide-react';
+import { Clock, Users, ChefHat, Award } from 'lucide-react';
 
 const AboutSection = () => {
   const features = [
     {
-      icon: Calendar,
-      title: '06 a 10 de Abril',
-      description: '5 dias de capacitação intensiva',
+      icon: ChefHat,
+      title: 'Cursos Práticos',
+      description: 'Aprenda fazendo com a chef Istefanny Cardoso',
     },
     {
       icon: Clock,
-      title: '20 Horas',
-      description: 'Carga horária total do workshop',
+      title: '8 Horas',
+      description: 'Carga horária por curso',
     },
     {
-      icon: MapPin,
-      title: 'Sebrae - Parauapebas',
-      description: 'Local presencial do evento',
+      icon: Users,
+      title: 'Vagas Limitadas',
+      description: 'Turmas reduzidas para melhor aprendizado',
     },
     {
-      icon: Monitor,
-      title: 'Traga seu Notebook',
-      description: 'Pré-requisito para participar',
+      icon: Award,
+      title: 'Certificado',
+      description: 'Receba certificado de participação',
     },
   ];
 

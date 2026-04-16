@@ -72,7 +72,7 @@ const Footer = () => {
                 Canaã Gastronomia 2026
               </h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Evento de capacitação em gastronomia em Canaã dos Carajás - PA.
+                Evento de capacitação em gastronomia.
                 Cursos práticos de trufas, chocolates e bolos com a chef Istefanny Cardoso.
               </p>
             </div>
@@ -142,7 +142,7 @@ const Footer = () => {
                 © {currentYear} Canaã Gastronomia. Todos os direitos reservados.
               </p>
               <p className="text-slate-500 text-sm flex items-center gap-1">
-                Realização com <Heart className="w-3.5 h-3.5 text-blue-400 fill-blue-400" /> em Canaã dos Carajás
+                Realização com <Heart className="w-3.5 h-3.5 text-blue-400 fill-blue-400" /> em Canaã
               </p>
             </div>
           </div>

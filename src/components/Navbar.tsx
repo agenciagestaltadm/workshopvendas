@@ -27,7 +27,6 @@ const Navbar = () => {
       onItemClick={handleItemClick}
       leadingImageSrc="/logo-canaa-gastronomia.png"
       leadingImageAlt="Canaã Gastronomia 2026"
-      leadingLabel="Canaã Gastronomia"
     />
   );
 };

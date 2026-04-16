@@ -98,10 +98,10 @@ export function NavBar({
               <img
                 src={leadingImageSrc}
                 alt={leadingImageAlt ?? leadingLabel}
-                width={120}
-                height={34}
+                width={140}
+                height={48}
                 decoding="async"
-                className="h-[30px] w-auto sm:h-[34px] object-contain"
+                className="h-[40px] w-auto sm:h-[48px] object-contain"
               />
             </span>
           ) : (

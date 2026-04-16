@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Calendar, MapPin } from 'lucide-react';
+import { CheckCircle2, Calendar } from 'lucide-react';
 
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -103,15 +103,7 @@ const Thanks = () => {
             Obrigado por se inscrever no Canaã Gastronomia 2026! Sua participação foi registrada com sucesso.
           </p>
 
-          <p
-            className={[
-              'mt-3 text-sm text-blue-500 font-medium',
-              'transition-all delay-150 duration-700 ease-out motion-reduce:transition-none',
-              isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
-            ].join(' ')}
-          >
-            Nos vemos em Canaã dos Carajás!
-          </p>
+
 
           {(hasCourses || state.registrationId) && (
             <div
@@ -171,11 +163,7 @@ const Thanks = () => {
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
-              <MapPin className="h-4 w-4 text-blue-500" />
-              <strong className="text-slate-700">Local:</strong> Canaã dos Carajás - PA
-            </p>
-            <p className="text-sm text-slate-400 mt-2">
+            <p className="text-sm text-slate-500">
               Você receberá mais informações por e-mail ou WhatsApp em breve.
             </p>
           </div>
