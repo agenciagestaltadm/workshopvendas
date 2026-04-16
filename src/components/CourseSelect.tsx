@@ -52,9 +52,11 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
 
     const isSelected = selectedIds?.includes(courseId) ?? false;
     if (isSelected) {
-      onSelectionChange(selectedIds.filter(id => id !== courseId));
+      // Desmarca o curso se ja estiver selecionado
+      onSelectionChange([]);
     } else {
-      onSelectionChange([...selectedIds, courseId]);
+      // Seleciona apenas este curso (substitui qualquer outro)
+      onSelectionChange([courseId]);
     }
   };
 
@@ -164,12 +166,12 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
 
       {/* Resumo da seleção */}
       {selectedIds.length > 0 && (
-        <div className="rounded-xl border border-[#7ED321]/30 bg-[#7ED321]/5 p-4">
-          <p className="text-sm font-medium text-foreground">
-            {selectedIds.length} {selectedIds.length === 1 ? 'curso selecionado' : 'cursos selecionados'}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-medium text-slate-800">
+            Curso selecionado
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Clique nos cards acima para adicionar ou remover cursos da sua inscrição.
+          <p className="mt-1 text-xs text-slate-500">
+            Clique em outro curso para alterar sua seleção.
           </p>
         </div>
       )}

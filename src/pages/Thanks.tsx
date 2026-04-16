@@ -41,28 +41,28 @@ const Thanks = () => {
   const hasCourses = courses.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-6 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-[50rem]">
-          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-full border border-border/60 bg-background/70 px-2 py-2 shadow-soft backdrop-blur-lg transition-all duration-300">
+    <div className="flex min-h-screen flex-col bg-white">
+      <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
             <div className="flex justify-start pl-2">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full px-5"
+                className="rounded-full px-5 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                 onClick={() => navigate('/')}
               >
-                Voltar para Página Inicial
+                Voltar
               </Button>
             </div>
             <span className="flex items-center justify-center">
               <img
-                src="/Design sem nome - 2026-03-20T153441.627.png"
-                alt="Workshop de Vendas Online"
-                width={120}
-                height={48}
+                src="/logo-canaa-gastronomia.png"
+                alt="Canaã Gastronomia 2026"
+                width={140}
+                height={40}
                 decoding="async"
-                className="h-[40px] w-auto object-contain sm:h-[48px]"
+                className="h-[36px] w-auto object-contain sm:h-[40px]"
               />
             </span>
             <div />
@@ -71,22 +71,22 @@ const Thanks = () => {
       </header>
       <main className="container mx-auto flex-1 px-4 pb-10 pt-32 sm:pt-36">
         <div className="relative mx-auto max-w-2xl text-center">
-          <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-80 max-w-4xl bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.18),transparent_62%)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-80 max-w-4xl bg-[radial-gradient(circle_at_center,hsl(217,91%,60%,0.08),transparent_62%)]" />
           <div
             className={[
-              'mx-auto flex h-20 w-20 items-center justify-center rounded-full shadow-soft',
-              'bg-gradient-cta text-primary-foreground',
+              'mx-auto flex h-16 w-16 items-center justify-center rounded-full',
+              'bg-blue-50 text-blue-500',
               'transition-all duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-95 opacity-0',
             ].join(' ')}
             aria-hidden="true"
           >
-            <CheckCircle2 className="h-10 w-10" />
+            <CheckCircle2 className="h-8 w-8" />
           </div>
 
           <h1
             className={[
-              'mt-8 font-display text-3xl font-bold text-foreground sm:text-4xl',
+              'mt-6 font-display text-3xl font-bold text-slate-800 sm:text-4xl',
               'transition-all duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
@@ -95,56 +95,56 @@ const Thanks = () => {
           </h1>
           <p
             className={[
-              'mt-4 text-muted-foreground',
+              'mt-3 text-slate-500',
               'transition-all delay-100 duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            Obrigado por se inscrever no Workshop de Vendas Online! Sua participação foi registrada com sucesso.
+            Obrigado por se inscrever no Canaã Gastronomia 2026! Sua participação foi registrada com sucesso.
           </p>
 
           <p
             className={[
-              'mt-4 text-sm text-accent font-medium',
+              'mt-3 text-sm text-blue-500 font-medium',
               'transition-all delay-150 duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            Não esqueça de trazer seu notebook!
+            Nos vemos em Canaã dos Carajás!
           </p>
 
           {(hasCourses || state.registrationId) && (
             <div
               className={[
-                'mt-10 rounded-2xl border border-border bg-card p-6 text-left shadow-soft',
+                'mt-10 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm',
                 'transition-all delay-200 duration-700 ease-out motion-reduce:transition-none',
                 isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
               ].join(' ')}
             >
               {state.name && (
-                <p className="text-sm text-muted-foreground">
-                  Nome: <span className="font-semibold text-foreground">{state.name}</span>
+                <p className="text-sm text-slate-500">
+                  Nome: <span className="font-semibold text-slate-800">{state.name}</span>
                 </p>
               )}
 
               {hasCourses && (
                 <div className={state.name ? 'mt-4' : ''}>
-                  <p className="text-sm font-medium text-foreground mb-3">
+                  <p className="text-sm font-medium text-slate-800 mb-3">
                     {courses.length === 1 ? 'Curso selecionado:' : `${courses.length} cursos selecionados:`}
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {courses.map((course, index) => (
                       <div 
                         key={course.id} 
-                        className="rounded-lg border border-border/60 bg-muted/30 p-3"
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                       >
                         <div className="flex items-start gap-2">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#7ED321]/20 text-[#7ED321] text-xs font-bold">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
                             {index + 1}
                           </span>
                           <div>
-                            <p className="text-sm font-medium text-foreground">{course.name}</p>
-                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                            <p className="text-sm font-medium text-slate-800">{course.name}</p>
+                            <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                               <Calendar className="h-3 w-3" />
                               {formatDateTime(course.startsAt)}
                             </p>
@@ -157,8 +157,8 @@ const Thanks = () => {
               )}
 
               {state.registrationId && (
-                <p className="mt-4 text-sm text-muted-foreground pt-4 border-t border-border/60">
-                  Protocolo: <span className="font-semibold text-foreground">{state.registrationId}</span>
+                <p className="mt-4 text-sm text-slate-500 pt-4 border-t border-slate-200">
+                  Protocolo: <span className="font-semibold text-slate-800">{state.registrationId}</span>
                 </p>
               )}
             </div>
@@ -166,16 +166,16 @@ const Thanks = () => {
 
           <div
             className={[
-              'mt-8 p-4 rounded-xl bg-muted/50 border border-border/60',
+              'mt-8 p-4 rounded-xl bg-blue-50 border border-blue-100',
               'transition-all delay-300 duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <strong className="text-foreground">Local:</strong> Sebrae - Parauapebas
+            <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+              <MapPin className="h-4 w-4 text-blue-500" />
+              <strong className="text-slate-700">Local:</strong> Canaã dos Carajás - PA
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-slate-400 mt-2">
               Você receberá mais informações por e-mail ou WhatsApp em breve.
             </p>
           </div>

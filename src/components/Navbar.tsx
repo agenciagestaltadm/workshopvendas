@@ -1,20 +1,33 @@
-import { BookOpen, ClipboardList, Info, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, Sparkles } from 'lucide-react';
 import { NavBar } from '@/components/ui/tubelight-navbar';
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   const navItems = [
-    { name: 'Sobre', url: '#sobre', icon: Info },
     { name: 'Cursos', url: '#cursos', icon: BookOpen },
-    { name: 'Inscrição', url: '#inscricao', icon: ClipboardList },
-    { name: 'Inscreva-se', url: '#inscricao', icon: Sparkles, isCta: true },
+    { name: 'Inscreva-se', url: '/registro', icon: Sparkles, isCta: true },
   ];
+
+  const handleItemClick = (event: React.MouseEvent, item: typeof navItems[0]) => {
+    if (item.url.startsWith('#')) {
+      event.preventDefault();
+      const element = document.querySelector(item.url);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      event.preventDefault();
+      navigate(item.url);
+    }
+  };
 
   return (
     <NavBar
       items={navItems}
-      leadingImageSrc="/Design sem nome - 2026-03-20T153441.627.png"
-      leadingImageAlt="Workshop de Vendas Online"
-      leadingLabel="Workshop Vendas Online"
+      onItemClick={handleItemClick}
+      leadingImageSrc="/logo-canaa-gastronomia.png"
+      leadingImageAlt="Canaã Gastronomia 2026"
+      leadingLabel="Canaã Gastronomia"
     />
   );
 };

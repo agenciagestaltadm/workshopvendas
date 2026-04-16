@@ -19,6 +19,7 @@ interface NavBarProps {
   leadingImageSrc?: string;
   leadingImageAlt?: string;
   className?: string;
+  onItemClick?: (event: React.MouseEvent, item: NavItem) => void;
 }
 
 export function NavBar({
@@ -28,18 +29,13 @@ export function NavBar({
   leadingImageSrc,
   leadingImageAlt,
   className,
+  onItemClick,
 }: NavBarProps) {
   const defaultActive = useMemo(() => items.find((item) => !item.isCta)?.name ?? items[0]?.name ?? "", [items]);
   const [activeTab, setActiveTab] = useState(defaultActive);
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [headerOpacity, setHeaderOpacity] = useState(0.7);
-  const [headerColor, setHeaderColor] = useState<string | null>(null);
-  const [navColors, setNavColors] = useState({
-    text: "rgb(248, 250, 252)",
-    ctaBg: "rgb(248, 250, 252)",
-    ctaText: "rgb(15, 23, 42)",
-  });
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -56,77 +52,21 @@ export function NavBar({
   }, []);
 
   useEffect(() => {
-    let rafId = 0;
-    const aboutSection = document.querySelector<HTMLElement>("section#sobre");
-    const sections = Array.from(document.querySelectorAll<HTMLElement>("section"));
-    const observedSections = sections.filter((section) => {
-      if (!aboutSection) return true;
-      return section.offsetTop >= aboutSection.offsetTop;
-    });
-
-    const updateHeaderState = () => {
-      const aboutTop = aboutSection?.offsetTop ?? 0;
-      const isHero = window.scrollY < Math.max(aboutTop - 20, 0);
-      setHeaderOpacity(isHero ? 0.7 : 1);
-
-      if (isHero) {
-        setHeaderColor(null);
-        setNavColors({
-          text: "rgb(248, 250, 252)",
-          ctaBg: "rgb(248, 250, 252)",
-          ctaText: "rgb(15, 23, 42)",
-        });
-        return;
-      }
-
-      const currentSection = observedSections.find((section) => {
-        const rect = section.getBoundingClientRect();
-        return rect.top <= 120 && rect.bottom >= 120;
-      });
-
-      if (currentSection) {
-        const computed = window.getComputedStyle(currentSection);
-        const background = computed.backgroundColor || null;
-        setHeaderColor(background);
-        if (background) {
-          const match = background.match(/rgba?\(([^)]+)\)/i);
-          if (match) {
-            const [r, g, b] = match[1]
-              .split(",")
-              .slice(0, 3)
-              .map((value) => Number.parseFloat(value.trim()));
-            const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-            const text = luminance > 0.5 ? "rgb(17, 24, 39)" : "rgb(248, 250, 252)";
-            const ctaText = luminance > 0.5 ? "rgb(248, 250, 252)" : "rgb(17, 24, 39)";
-            setNavColors({
-              text,
-              ctaBg: text,
-              ctaText,
-            });
-          }
-        }
-      }
-    };
-
     const handleScroll = () => {
-      if (rafId) return;
-      rafId = window.requestAnimationFrame(() => {
-        updateHeaderState();
-        rafId = 0;
-      });
+      setIsScrolled(window.scrollY > 10);
     };
 
-    updateHeaderState();
+    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-      if (rafId) window.cancelAnimationFrame(rafId);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleItemClick = (event: React.MouseEvent, item: NavItem) => {
+    if (onItemClick) {
+      onItemClick(event, item);
+      return;
+    }
+
     if (item.url.startsWith("#")) {
       event.preventDefault();
       const element = document.querySelector(item.url);
@@ -143,117 +83,38 @@ export function NavBar({
   };
 
   return (
-    <div className={cn("fixed top-0 left-0 right-0 z-50 pt-6 px-5 sm:px-6 lg:px-8", className)}>
-      <div className="mx-auto w-full max-w-[50rem]">
+    <div className={cn("fixed top-0 left-0 right-0 z-50 transition-all duration-300", isScrolled ? "pt-3 px-4 sm:px-6 lg:px-8" : "pt-5 px-5 sm:px-6 lg:px-8", className)}>
+      <div className="mx-auto w-full max-w-5xl">
         <div
-          className="flex w-full items-center justify-between gap-4 border border-border/60 backdrop-blur-lg py-2 px-2 rounded-full shadow-soft transition-all duration-300 sm:justify-center sm:gap-5"
-          style={{
-            backgroundColor: headerColor ?? undefined,
-            opacity: headerOpacity,
-            color: navColors.text,
-            ["--nav-fg" as string]: navColors.text,
-            ["--nav-cta-bg" as string]: navColors.ctaBg,
-            ["--nav-cta-fg" as string]: navColors.ctaText,
-          }}
+          className={cn(
+            "flex w-full items-center justify-between gap-2 backdrop-blur-xl py-2 px-3 rounded-2xl transition-all duration-300",
+            isScrolled
+              ? "bg-white/95 border border-slate-200/80 shadow-sm"
+              : "bg-white/80 border border-slate-200/50"
+          )}
         >
-        {leadingImageSrc ? (
-          <span className="flex items-center justify-center px-4">
-            <img
-              src={leadingImageSrc}
-              alt={leadingImageAlt ?? leadingLabel}
-              width={56}
-              height={56}
-              decoding="async"
-              className="h-[60px] w-auto sm:h-[72px] object-contain"
-            />
-          </span>
-        ) : (
-          LeadingIcon && (
-            <span className="flex items-center justify-center px-4 text-[var(--nav-fg)]">
-              <LeadingIcon size={20} strokeWidth={2.2} aria-label={leadingLabel} />
+          {leadingImageSrc ? (
+            <span className="flex items-center justify-center pl-1">
+              <img
+                src={leadingImageSrc}
+                alt={leadingImageAlt ?? leadingLabel}
+                width={120}
+                height={34}
+                decoding="async"
+                className="h-[30px] w-auto sm:h-[34px] object-contain"
+              />
             </span>
-          )
-        )}
-        {!isMobile &&
-          items.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.name;
+          ) : (
+            LeadingIcon && (
+              <span className="flex items-center justify-center px-3 text-slate-800">
+                <LeadingIcon size={20} strokeWidth={2.2} aria-label={leadingLabel} />
+              </span>
+            )
+          )}
 
-            if (item.isCta) {
-              return (
-                <button
-                  key={item.name}
-                  onClick={(event) => handleItemClick(event, item)}
-                  className="px-8 py-3 font-semibold rounded-full hover:scale-105 transition-transform shadow-soft"
-                  style={{ backgroundColor: "var(--nav-cta-bg)", color: "var(--nav-cta-fg)" }}
-                  type="button"
-                >
-                  {item.name}
-                </button>
-              );
-            }
-
-            return (
-              <a
-                key={item.name}
-                href={item.url}
-                onClick={(event) => handleItemClick(event, item)}
-                className={cn(
-                  "relative cursor-pointer text-sm font-semibold px-9 py-3 rounded-full transition-all",
-                  "text-[var(--nav-fg)] hover:opacity-80",
-                  isActive && "bg-black/10",
-                )}
-              >
-                <span>{item.name}</span>
-                {isActive && (
-                  <motion.div
-                    layoutId="lamp"
-                    className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
-                    initial={false}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 30,
-                    }}
-                  >
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
-                      <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
-                      <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
-                      <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
-                    </div>
-                  </motion.div>
-                )}
-              </a>
-            );
-          })}
-        {isMobile && (
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen((open) => !open)}
-            className="mr-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 text-[var(--nav-fg)] transition-colors hover:bg-black/10"
-            aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={isMenuOpen}
-            aria-controls="mobile-nav"
-          >
-            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        )}
-        </div>
-        {isMobile && (
-          <div
-            id="mobile-nav"
-            className={cn(
-              "mt-3 overflow-hidden rounded-2xl border border-border/60 backdrop-blur-lg shadow-soft transition-all duration-300",
-              isMenuOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0 pointer-events-none",
-            )}
-            style={{
-              backgroundColor: headerColor ?? "rgba(15, 23, 42, 0.65)",
-              color: navColors.text,
-            }}
-          >
-            <div className="flex flex-col gap-2 p-3">
+          {!isMobile && (
+            <nav className="flex items-center gap-1">
               {items.map((item) => {
-                const Icon = item.icon;
                 const isActive = activeTab === item.name;
 
                 if (item.isCta) {
@@ -261,8 +122,7 @@ export function NavBar({
                     <button
                       key={item.name}
                       onClick={(event) => handleItemClick(event, item)}
-                      className="w-full px-5 py-3 font-semibold rounded-full shadow-soft transition-transform hover:scale-[1.01]"
-                      style={{ backgroundColor: "var(--nav-cta-bg)", color: "var(--nav-cta-fg)" }}
+                      className="px-6 py-2 bg-blue-500 text-white text-sm font-semibold rounded-full hover:bg-blue-600 transition-colors shadow-sm"
                       type="button"
                     >
                       {item.name}
@@ -276,12 +136,82 @@ export function NavBar({
                     href={item.url}
                     onClick={(event) => handleItemClick(event, item)}
                     className={cn(
-                      "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors",
-                      "text-[var(--nav-fg)] hover:bg-black/10",
-                      isActive && "bg-black/10",
+                      "relative cursor-pointer text-sm font-medium px-4 py-2 rounded-full transition-colors",
+                      "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
+                      isActive && "text-blue-600 bg-blue-50"
                     )}
                   >
-                    <Icon size={18} strokeWidth={2.5} />
+                    <span>{item.name}</span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="nav-indicator"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-blue-500 rounded-full"
+                        initial={false}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100"
+              aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-nav"
+            >
+              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          )}
+        </div>
+
+        {isMobile && (
+          <div
+            id="mobile-nav"
+            className={cn(
+              "mt-2 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-xl shadow-sm transition-all duration-300",
+              isMenuOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0 pointer-events-none",
+            )}
+          >
+            <div className="flex flex-col gap-1 p-2">
+              {items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.name;
+
+                if (item.isCta) {
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={(event) => handleItemClick(event, item)}
+                      className="w-full px-5 py-3 bg-blue-500 text-white font-semibold rounded-xl transition-colors hover:bg-blue-600"
+                      type="button"
+                    >
+                      {item.name}
+                    </button>
+                  );
+                }
+
+                return (
+                  <a
+                    key={item.name}
+                    href={item.url}
+                    onClick={(event) => handleItemClick(event, item)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors",
+                      "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                      isActive && "text-blue-600 bg-blue-50"
+                    )}
+                  >
+                    <Icon size={18} strokeWidth={2} />
                     <span>{item.name}</span>
                   </a>
                 );

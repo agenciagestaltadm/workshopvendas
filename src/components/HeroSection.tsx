@@ -1,118 +1,100 @@
-import { ArrowDown, Calendar, MapPin, Laptop } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowDown, Calendar, MapPin, ChefHat } from 'lucide-react';
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
   const scrollToCursos = () => {
     document.getElementById('cursos')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const scrollToInscricao = () => {
-    document.getElementById('inscricao')?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#0D4D4D] via-[#1B6B6B] to-[#2D8A8A]">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Floating Circles */}
-        <div className="absolute -top-20 -left-20 w-96 h-96 bg-[#7ED321]/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 -right-32 w-80 h-80 bg-[#4CAF50]/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute -bottom-20 left-1/3 w-72 h-72 bg-[#7ED321]/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        
-        {/* Grid Pattern using CSS */}
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `linear-gradient(rgba(126, 211, 33, 0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(126, 211, 33, 0.1) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
-          }}
-        />
-        
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80" />
-      </div>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-blue-50 to-white">
+      {/* Subtle decorative elements */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-50/60 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
 
-      {/* Content - Aumentado e mais compacto */}
+      {/* Content */}
       <div className="relative z-10 container mx-auto px-4 pt-28 pb-20 text-center">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Badge */}
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Logo */}
           <div className="flex justify-center animate-fade-in">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium">
-              <span className="w-2 h-2 bg-[#7ED321] rounded-full animate-pulse" />
-              Inscrições Abertas - Parauapebas
+            <img
+              src="/logo-canaa-gastronomia.png"
+              alt="Canaã Gastronomia 2026"
+              className="w-auto h-24 md:h-32 object-contain"
+            />
+          </div>
+
+          {/* Badge */}
+          <div className="flex justify-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-sm font-medium">
+              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+              Inscrições Abertas
             </span>
           </div>
 
-          {/* Title - Maior e mais impactante */}
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-tight animate-fade-in drop-shadow-lg">
-            <span className="text-[#7ED321]">WORKSHOP</span>
-            <span className="block text-white mt-2 text-3xl md:text-4xl lg:text-5xl tracking-wider">DE VENDAS ONLINE</span>
+          {/* Title */}
+          <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight animate-fade-in tracking-tight" style={{ animationDelay: '0.2s' }}>
+            <span className="text-slate-800">CANAÃ</span>
+            <span className="block text-blue-500 mt-1 text-2xl md:text-3xl tracking-wider font-semibold">GASTRONOMIA</span>
+            <span className="block text-slate-400 mt-1 text-xl md:text-2xl font-medium">2026</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-white/90 font-semibold tracking-wide uppercase animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            20 horas de capacitação gratuita
+          <p className="text-lg md:text-xl text-slate-500 font-medium animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            21 a 23 de Abril · Canaã dos Carajás - PA
           </p>
 
           {/* Description */}
-          <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            Aprenda a vender pela internet com cursos práticos de produtos digitais, 
-            páginas de vendas, criativos, tráfego pago e técnicas de vendas.
+          <p className="text-base text-slate-500 max-w-xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            Uma experiência única de aprendizado em gastronomia. 
+            Cursos práticos de trufas, chocolates e bolos com a chef Istefanny Cardoso.
           </p>
 
           {/* Event Info Cards */}
-          <div className="flex flex-wrap justify-center gap-3 md:gap-4 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <MapPin className="w-4 h-4 text-[#7ED321]" />
-              <span className="text-white text-sm font-medium">Sebrae - Parauapebas</span>
+          <div className="flex flex-wrap justify-center gap-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200 shadow-sm">
+              <MapPin className="w-4 h-4 text-blue-500" />
+              <span className="text-slate-600 text-sm font-medium">Canaã dos Carajás - PA</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <Calendar className="w-4 h-4 text-[#7ED321]" />
-              <span className="text-white text-sm font-medium">06 a 10 de Abril</span>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200 shadow-sm">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              <span className="text-slate-600 text-sm font-medium">21 a 23 de Abril</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <Laptop className="w-4 h-4 text-[#7ED321]" />
-              <span className="text-white text-sm font-medium">Traga seu notebook</span>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200 shadow-sm">
+              <ChefHat className="w-4 h-4 text-blue-500" />
+              <span className="text-slate-600 text-sm font-medium">8h por curso</span>
             </div>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <button 
-              onClick={scrollToInscricao}
-              className="group px-8 py-4 bg-gradient-to-r from-[#7ED321] to-[#4CAF50] rounded-full text-white font-bold text-lg shadow-lg shadow-[#7ED321]/30 hover:shadow-xl hover:shadow-[#7ED321]/40 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2"
+              onClick={() => navigate('/registro')}
+              className="group px-8 py-3.5 bg-blue-500 rounded-full text-white font-semibold text-base shadow-sm hover:bg-blue-600 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
             >
               Inscreva-se Agora
-              <ArrowDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
+              <ArrowDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
             </button>
             <button 
               onClick={scrollToCursos}
-              className="px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 rounded-full text-white font-semibold text-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300"
+              className="px-8 py-3.5 bg-white border border-slate-200 rounded-full text-slate-700 font-semibold text-base hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm"
             >
-              Ver Módulos
+              Ver Cursos
             </button>
           </div>
         </div>
       </div>
 
-      {/* Decorative Bottom Wave */}
-      <div className="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-          <path 
-            d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" 
-            fill="hsl(var(--background))"
-          />
-        </svg>
-      </div>
-      
       {/* Scroll Indicator */}
       <button 
         onClick={scrollToCursos}
-        className="absolute bottom-24 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer z-20"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer z-20"
         aria-label="Rolar para baixo"
       >
-        <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all">
-          <ArrowDown className="w-5 h-5 text-white" />
+        <div className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm">
+          <ArrowDown className="w-4 h-4 text-slate-400" />
         </div>
       </button>
     </section>

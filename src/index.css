@@ -6,113 +6,102 @@
 
 @layer base {
   :root {
-    /* Workshop de Vendas Online - Tema Verde/Azul-Petróleo SEBRAE */
-    --background: 170 20% 97%;
-    --foreground: 170 60% 15%;
+    /* Canaã Gastronomia - Tema Clean Branco/Azul Claro */
+    --background: 0 0% 100%;
+    --foreground: 215 25% 27%;
 
     --card: 0 0% 100%;
-    --card-foreground: 170 60% 15%;
+    --card-foreground: 215 25% 27%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 170 60% 15%;
+    --popover-foreground: 215 25% 27%;
 
-    /* Primary: Teal/Verde Petróleo */
-    --primary: 170 70% 35%;
+    /* Primary: Azul Claro */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Verde Claro */
-    --secondary: 140 50% 92%;
-    --secondary-foreground: 170 60% 25%;
+    /* Secondary: Blue-50 */
+    --secondary: 214 100% 97%;
+    --secondary-foreground: 215 25% 27%;
 
-    /* Muted: Verde muito claro */
-    --muted: 160 20% 94%;
-    --muted-foreground: 170 15% 45%;
+    /* Muted: Blue-50 suave */
+    --muted: 214 100% 97%;
+    --muted-foreground: 215 16% 47%;
 
-    /* Accent: Verde Limão/Vibrante */
-    --accent: 100 70% 50%;
-    --accent-foreground: 170 60% 15%;
-
-    /* Gold/Amarelo para destaques */
-    --gold: 45 90% 55%;
-    --gold-foreground: 45 90% 20%;
+    /* Accent: Azul médio */
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 160 20% 88%;
-    --input: 160 20% 88%;
-    --ring: 170 70% 35%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
 
     --radius: 0.75rem;
 
-    /* Custom gradients - Tema Verde */
-    --gradient-hero: linear-gradient(135deg, hsl(170, 70%, 35%) 0%, hsl(100, 70%, 45%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(140, 50%, 95%) 0%, hsl(0, 0%, 100%) 100%);
-    --gradient-cta: linear-gradient(135deg, hsl(170, 70%, 40%) 0%, hsl(100, 70%, 50%) 50%, hsl(45, 90%, 55%) 100%);
-    --gradient-section: linear-gradient(180deg, hsl(170, 20%, 97%) 0%, hsl(140, 30%, 96%) 100%);
+    /* Custom gradients - Tema Azul Claro */
+    --gradient-hero: linear-gradient(180deg, hsl(214, 100%, 97%) 0%, hsl(0, 0%, 100%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(214, 100%, 97%) 0%, hsl(0, 0%, 100%) 100%);
+    --gradient-cta: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(213, 94%, 68%) 100%);
+    --gradient-section: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(214, 100%, 97%) 100%);
 
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(170 70% 35% / 0.15);
-    --shadow-card: 0 8px 30px -8px hsl(170 70% 35% / 0.2);
-    --shadow-cta: 0 8px 25px -5px hsl(100 70% 50% / 0.4);
+    --shadow-soft: 0 1px 3px 0 hsl(215 25% 27% / 0.06), 0 1px 2px -1px hsl(215 25% 27% / 0.06);
+    --shadow-card: 0 4px 6px -1px hsl(215 25% 27% / 0.07), 0 2px 4px -2px hsl(215 25% 27% / 0.07);
+    --shadow-cta: 0 10px 15px -3px hsl(217 91% 60% / 0.2), 0 4px 6px -4px hsl(217 91% 60% / 0.2);
 
-    /* Category colors - Tema Verde */
-    --category-saude: 340 75% 55%;
-    --category-empreendedorismo: 170 70% 40%;
-    --category-oficina: 200 70% 50%;
-    --category-curso: 100 70% 45%;
-    --category-palestra: 160 60% 45%;
+    /* Category colors */
+    --category-curso: 217 91% 60%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 214 100% 97%;
+    --sidebar-accent-foreground: 215 25% 27%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .dark {
-    --background: 170 40% 8%;
-    --foreground: 160 20% 95%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 170 35% 12%;
-    --card-foreground: 160 20% 95%;
+    --card: 222 47% 15%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 170 35% 12%;
-    --popover-foreground: 160 20% 95%;
+    --popover: 222 47% 15%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 100 70% 55%;
-    --primary-foreground: 170 60% 10%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 170 30% 20%;
-    --secondary-foreground: 100 70% 85%;
+    --secondary: 222 47% 20%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 170 25% 18%;
-    --muted-foreground: 170 15% 65%;
+    --muted: 222 47% 18%;
+    --muted-foreground: 215 16% 57%;
 
-    --accent: 100 70% 55%;
-    --accent-foreground: 170 60% 10%;
-
-    --gold: 45 85% 60%;
-    --gold-foreground: 45 90% 15%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 170 25% 22%;
-    --input: 170 25% 22%;
-    --ring: 100 70% 55%;
+    --border: 222 47% 22%;
+    --input: 222 47% 22%;
+    --ring: 217 91% 60%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 222 47% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 22%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 

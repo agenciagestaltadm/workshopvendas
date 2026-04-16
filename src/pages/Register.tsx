@@ -31,7 +31,7 @@ const formSchema = z.object({
       return cleaned.length === 11 || cleaned.length === 14;
     }, 'Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido')
     .refine((val) => isValidDocument(val), 'CPF ou CNPJ inválido. Verifique os dígitos informados.'),
-  courseIds: z.array(z.string()).min(1, 'Selecione pelo menos um curso'),
+  courseIds: z.array(z.string()).length(1, 'Selecione exatamente um curso'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -228,44 +228,48 @@ const Register = () => {
   const onSubmit = (values: FormValues) => registerMutation.mutate(values);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-6 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-[50rem]">
-          <div className="flex w-full items-center justify-between gap-4 rounded-full border border-border/60 bg-background/70 px-2 py-2 shadow-soft backdrop-blur-lg transition-all duration-300">
-            <span className="flex items-center justify-center px-4">
+    <div className="min-h-screen bg-white">
+      <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
+            <span className="flex items-center justify-center px-2">
               <img
-                src="/Design sem nome - 2026-03-20T153441.627.png"
-                alt="Workshop de Vendas Online"
-                width={120}
-                height={48}
+                src="/logo-canaa-gastronomia.png"
+                alt="Canaã Gastronomia 2026"
+                width={140}
+                height={40}
                 decoding="async"
-                className="h-[40px] w-auto object-contain sm:h-[48px]"
+                className="h-[36px] w-auto object-contain sm:h-[40px]"
               />
             </span>
-            <Button type="button" variant="outline" onClick={handleBack} className="rounded-full px-6">
+            <Button type="button" variant="outline" onClick={handleBack} className="rounded-full px-6 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800">
               Voltar
             </Button>
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 pb-16 pt-32 sm:pt-36">
-        <div className="mx-auto max-w-4xl">
+      <main className="container mx-auto px-4 pb-16 pt-28 sm:pt-32">
+        <div className="mx-auto max-w-2xl">
           <header className="text-center">
-            <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl">Inscrição</h1>
-            <p className="mt-3 text-muted-foreground">
-              Preencha seus dados e escolha os cursos do <strong className="text-foreground">Workshop de Vendas Online</strong>.
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-sm font-medium mb-4">
+              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+              Inscrições Abertas
+            </span>
+            <h1 className="font-display text-3xl font-bold text-slate-800 sm:text-4xl">Inscrição</h1>
+            <p className="mt-3 text-slate-500">
+              Preencha seus dados e escolha os cursos do <strong className="text-blue-500">Canaã Gastronomia 2026</strong>.
             </p>
           </header>
 
           {!isSupabaseConfigured ? (
-            <div className="mt-10 rounded-2xl border border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+              <p className="text-sm text-slate-500">
                 O sistema de inscrições ainda não está configurado. Defina <strong>VITE_SUPABASE_URL</strong> e{' '}
                 <strong>VITE_SUPABASE_ANON_KEY</strong>.
               </p>
             </div>
           ) : (
-            <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-8">
+            <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField
@@ -403,7 +407,7 @@ const Register = () => {
 
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3.5 rounded-xl transition-colors duration-200"
                     disabled={registerMutation.isPending || availabilityQuery.isLoading || availabilityQuery.isError || (availabilityQuery.data?.length === 0) || hasAnySoldOut || selectedCourseIds.length === 0}
                   >
                     {registerMutation.isPending 
@@ -415,14 +419,14 @@ const Register = () => {
                           : hasAnySoldOut 
                             ? 'Remova cursos lotados' 
                             : selectedCourseIds.length === 0
-                              ? 'Selecione pelo menos um curso'
-                              : `Confirmar inscrição em ${selectedCourseIds.length} ${selectedCourseIds.length === 1 ? 'curso' : 'cursos'}`
+                              ? 'Selecione um curso'
+                              : 'Confirmar inscrição no curso'
                     }
                   </Button>
                 </form>
               </Form>
 
-              <p className="mt-6 text-center text-xs text-muted-foreground">
+              <p className="mt-6 text-center text-xs text-slate-400">
                 As vagas são verificadas no momento do envio. Se algum curso lotar, sua inscrição não será salva.
               </p>
             </div>
