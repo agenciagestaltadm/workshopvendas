@@ -25,7 +25,7 @@ const Navbar = () => {
     <NavBar
       items={navItems}
       onItemClick={handleItemClick}
-      leadingImageSrc="/logo-canaa-gastronomia.png"
+      leadingImageSrc="/LogoCanaãGastronomia.png"
       leadingImageAlt="Canaã Gastronomia 2026"
     />
   );

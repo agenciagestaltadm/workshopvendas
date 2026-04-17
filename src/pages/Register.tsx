@@ -234,7 +234,7 @@ const Register = () => {
           <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
             <span className="flex items-center justify-center px-2">
               <img
-                src="/logo-canaa-gastronomia.png"
+                src="/LogoCanaãGastronomia.png"
                 alt="Canaã Gastronomia 2026"
                 width={140}
                 height={40}

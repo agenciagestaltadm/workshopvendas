@@ -57,7 +57,7 @@ const Thanks = () => {
             </div>
             <span className="flex items-center justify-center">
               <img
-                src="/logo-canaa-gastronomia.png"
+                src="/LogoCanaãGastronomia.png"
                 alt="Canaã Gastronomia 2026"
                 width={140}
                 height={40}

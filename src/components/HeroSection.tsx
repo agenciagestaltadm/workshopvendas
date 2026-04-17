@@ -20,7 +20,7 @@ const HeroSection = () => {
           {/* Logo */}
           <div className="flex justify-center animate-fade-in">
             <img
-              src="/logo-canaa-gastronomia.png"
+              src="/LogoCanaãGastronomia.png"
               alt="Canaã Gastronomia 2026"
               className="w-auto h-24 md:h-32 object-contain"
             />
