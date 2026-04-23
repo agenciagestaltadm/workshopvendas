@@ -60,7 +60,15 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { toast } from '@/components/ui/use-toast';
-import { buildDisparoXlsxBlob, buildFullWorkbookBlob, downloadBlob } from '@/lib/exports';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { buildDisparoXlsxBlob, buildFullWorkbookBlob, downloadBlob, type FullExportRow } from '@/lib/exports';
 import { normalizePhoneForWhatsApp } from '@/lib/phone';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 
@@ -103,6 +111,33 @@ const formatDateTime = (value: string) => {
   return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 };
 
+/** Gera linhas de export. Com `filterCourseId`, inclui só inscrições nesse curso e a coluna Curso reflete só esse curso. */
+const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId?: string): FullExportRow[] => {
+  if (!rows?.length) return [];
+  const out: FullExportRow[] = [];
+  for (const row of rows) {
+    const rcs = filterCourseId
+      ? row.registration_courses.filter((rc) => rc.course_id === filterCourseId)
+      : row.registration_courses;
+    if (filterCourseId && rcs.length === 0) continue;
+    const courseParts = rcs.map((rc) => {
+      const courseName = rc.courses?.name ?? rc.course_id;
+      const date = rc.courses?.starts_at ? formatDateTime(rc.courses.starts_at) : '';
+      return date ? `${courseName} (${date})` : courseName;
+    });
+    const course = courseParts.length > 0 ? courseParts.join('; ') : 'Nenhum curso';
+    out.push({
+      createdAt: row.created_at,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      document: row.document,
+      course,
+    });
+  }
+  return out;
+};
+
 const formatDateShort = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -116,6 +151,9 @@ const Admin = () => {
   const [isChecking, setIsChecking] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<RegistrationRow | null>(null);
   const [exporting, setExporting] = useState<null | 'full' | 'disparo'>(null);
+  const [exportFullDialogOpen, setExportFullDialogOpen] = useState(false);
+  const [fullExportScope, setFullExportScope] = useState<'all' | 'course'>('all');
+  const [fullExportCourseId, setFullExportCourseId] = useState('');
 
   // Estados para edição de curso
   const [editingCourse, setEditingCourse] = useState<CourseAvailability | null>(null);
@@ -247,6 +285,13 @@ const Admin = () => {
   const totalRegistrations = registrationsQuery.data?.length ?? 0;
   const activeCoursesCount = availabilityQuery.data?.filter(c => c.is_active).length ?? 0;
   const inactiveCoursesCount = availabilityQuery.data?.filter(c => !c.is_active).length ?? 0;
+
+  const coursesForExportSelect = useMemo(() => {
+    const list = availabilityQuery.data ?? [];
+    return [...list].sort(
+      (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    );
+  }, [availabilityQuery.data]);
 
   // Filtro de inscrições
   const filteredRegistrations = useMemo(() => {
@@ -606,35 +651,39 @@ const Admin = () => {
     }
   };
 
-  const exportRows = useMemo(() => {
-    return (registrationsQuery.data ?? []).map((row) => {
-      const courses = row.registration_courses
-        .map(rc => {
-          const courseName = rc.courses?.name ?? rc.course_id;
-          const date = rc.courses?.starts_at ? formatDateTime(rc.courses.starts_at) : '';
-          return date ? `${courseName} (${date})` : courseName;
-        })
-        .join('; ');
+  const exportRows = useMemo(
+    () => buildFullExportRows(registrationsQuery.data, undefined),
+    [registrationsQuery.data]
+  );
 
-      return {
-        createdAt: row.created_at,
-        name: row.name,
-        email: row.email,
-        phone: row.phone,
-        document: row.document,
-        course: courses || 'Nenhum curso',
-      };
-    });
-  }, [registrationsQuery.data]);
+  const openExportFullDialog = () => {
+    setFullExportScope('all');
+    setFullExportCourseId(coursesForExportSelect[0]?.course_id ?? '');
+    setExportFullDialogOpen(true);
+  };
 
-  const handleDownloadFull = async () => {
+  const handleConfirmFullExport = async () => {
     if (exporting) return;
-    if (exportRows.length === 0) {
-      toast({ title: 'Nada para exportar', description: 'Nenhuma inscrição foi encontrada.' });
+    if (fullExportScope === 'course' && !fullExportCourseId) {
+      toast({ title: 'Selecione um curso', description: 'Escolha um curso na lista para exportar.', variant: 'destructive' });
       return;
     }
 
-    const invalid = exportRows.find((row) => !row.name.trim() || !row.email.trim() || !row.phone.trim());
+    const filterId = fullExportScope === 'course' ? fullExportCourseId : undefined;
+    const rows = buildFullExportRows(registrationsQuery.data, filterId);
+
+    if (rows.length === 0) {
+      toast({
+        title: 'Nada para exportar',
+        description:
+          fullExportScope === 'course'
+            ? 'Nenhuma inscrição encontrada para este curso.'
+            : 'Nenhuma inscrição foi encontrada.',
+      });
+      return;
+    }
+
+    const invalid = rows.find((row) => !row.name.trim() || !row.email.trim() || !row.phone.trim());
     if (invalid) {
       toast({
         title: 'Dados incompletos',
@@ -646,9 +695,15 @@ const Admin = () => {
 
     setExporting('full');
     try {
-      const blob = buildFullWorkbookBlob(exportRows);
-      downloadBlob(`inscricoes-completo-${new Date().toISOString().slice(0, 10)}.xlsx`, blob);
-      toast({ title: 'Download iniciado', description: 'Arquivo Excel completo gerado com sucesso.' });
+      const blob = buildFullWorkbookBlob(rows);
+      const date = new Date().toISOString().slice(0, 10);
+      const filename =
+        fullExportScope === 'all'
+          ? `inscricoes-completo-${date}.xlsx`
+          : `inscricoes-curso-${fullExportCourseId.replace(/[^a-zA-Z0-9-_]/g, '_')}-${date}.xlsx`;
+      downloadBlob(filename, blob);
+      toast({ title: 'Download iniciado', description: 'Arquivo Excel gerado com sucesso.' });
+      setExportFullDialogOpen(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro inesperado';
       toast({ title: 'Falha ao gerar Excel', description: message, variant: 'destructive' });
@@ -932,7 +987,7 @@ const Admin = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold text-foreground">Inscrições</h2>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="button" variant="outline" onClick={handleDownloadFull} disabled={exporting !== null}>
+                <Button type="button" variant="outline" onClick={openExportFullDialog} disabled={exporting !== null}>
                   {exporting === 'full' ? 'Gerando...' : 'Baixar Excel Completo'}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleDownloadDisparo} disabled={exporting !== null}>
@@ -1103,6 +1158,96 @@ const Admin = () => {
         </div>
       </main>
       <Footer />
+
+      <Dialog open={exportFullDialogOpen} onOpenChange={setExportFullDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Baixar Excel completo</DialogTitle>
+            <DialogDescription>
+              Escolha exportar todas as inscrições ou somente as de um curso específico.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <RadioGroup
+              value={fullExportScope}
+              onValueChange={(v) => {
+                const next = v as 'all' | 'course';
+                setFullExportScope(next);
+                if (next === 'course' && coursesForExportSelect[0]) {
+                  setFullExportCourseId((prev) =>
+                    prev && coursesForExportSelect.some((c) => c.course_id === prev)
+                      ? prev
+                      : coursesForExportSelect[0].course_id
+                  );
+                }
+              }}
+              className="space-y-3"
+            >
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="all" id="export-scope-all" className="mt-1" />
+                <div>
+                  <Label htmlFor="export-scope-all" className="cursor-pointer font-medium">
+                    Todos os cursos
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Inclui todas as inscrições; a coluna Curso reúne os cursos de cada pessoa.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="course" id="export-scope-course" className="mt-1" />
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="export-scope-course" className="cursor-pointer font-medium">
+                    Apenas um curso
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Só inscrições vinculadas ao curso escolhido; a coluna Curso exibe somente esse curso.
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+            {fullExportScope === 'course' && (
+              <div className="space-y-2 pl-0.5">
+                <Label htmlFor="export-course-select">Curso</Label>
+                {availabilityQuery.isLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando cursos...</p>
+                ) : coursesForExportSelect.length === 0 ? (
+                  <p className="text-sm text-destructive">Nenhum curso cadastrado.</p>
+                ) : (
+                  <Select value={fullExportCourseId} onValueChange={setFullExportCourseId}>
+                    <SelectTrigger id="export-course-select">
+                      <SelectValue placeholder="Selecione o curso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coursesForExportSelect.map((c) => (
+                        <SelectItem key={c.course_id} value={c.course_id}>
+                          {c.name} — {formatDateTime(c.starts_at)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setExportFullDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmFullExport}
+              disabled={
+                exporting !== null ||
+                (fullExportScope === 'course' &&
+                  (availabilityQuery.isLoading || !fullExportCourseId || coursesForExportSelect.length === 0))
+              }
+            >
+              {exporting === 'full' ? 'Gerando...' : 'Baixar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Edição de Vagas */}
       <Dialog open={Boolean(editingCourse)} onOpenChange={() => setEditingCourse(null)}>
