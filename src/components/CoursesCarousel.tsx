@@ -1,117 +1,64 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
+import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 
-const courses = [
-  {
-    id: 1,
-    title: 'Chocolates Bean to Bar',
-    date: '21 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Avenida da Cooperativa, 496, São José',
-    image: '/fotos/CHOCOLATES BEAN TO BAR.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Aprenda todo o processo do chocolate Bean to Bar, desde a seleção do cacau até a produção final.',
-  },
-  {
-    id: 2,
-    title: 'Trufas Artesanais',
-    date: '22 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Rua Presidente Médici S/N, Feira do Produtor',
-    image: '/fotos/TRUFAS ARTESANAIS.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Aprenda a produzir trufas artesanais irresistíveis com técnicas de preparo e recheios variados.',
-  },
-  {
-    id: 3,
-    title: 'Bolos Caseiros & Bolos para Venda',
-    date: '23 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Rua Presidente Médici S/N, Feira do Produtor',
-    image: '/fotos/BOLOS CASEIROS & BOLOS PARA VENDA.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Aprenda a preparar bolos caseiros deliciosos e versões ideais para venda com técnicas lucrativas.',
-  },
-  {
-    id: 4,
-    title: 'Canais de Aquisição de Clientes',
-    date: '24 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Avenida da Cooperativa, 496, São José',
-    image: '/fotos/CANAIS DE AQUISIÇÃO DE CLIENTES - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Descubra estratégias eficazes para atrair e conquistar novos clientes para o seu negócio.',
-  },
-  {
-    id: 5,
-    title: 'Como Iniciar um Negócio de Alimentação do Zero',
-    date: '25 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Rua Presidente Médici S/N, Feira do Produtor',
-    image: '/fotos/COMO INICIAR UM NEGÓCIO DE ALIMENTAÇÃO DO ZERO - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Aprenda o passo a passo para montar um negócio de alimentação do zero com segurança e planejamento.',
-  },
-  {
-    id: 6,
-    title: 'Curso de Bartender Rápido',
-    date: '26 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Avenida da Cooperativa, 496, São José',
-    image: '/fotos/CURSO DE BARTENDER RÁPIDO - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Aprenda técnicas de preparo de drinks e coquetéis para impulsionar sua carreira como bartender.',
-  },
-  {
-    id: 7,
-    title: 'Gestão de Segurança de Alimentos',
-    date: '27 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Rua Presidente Médici S/N, Feira do Produtor',
-    image: '/fotos/GESTÃO DE SEGURANÇA DE ALIMENTOS CONFORME AS DIRETRIZES - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Conheça as diretrizes e boas práticas para garantir a segurança alimentar no seu negócio.',
-  },
-  {
-    id: 8,
-    title: 'Instagram para Negócios Locais',
-    date: '28 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Avenida da Cooperativa, 496, São José',
-    image: '/fotos/INSTAGRAM PARA NEGÓCIOS LOCAIS - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Aprenda a usar o Instagram para promover seu negócio local e atrair mais clientes.',
-  },
-  {
-    id: 9,
-    title: 'Oficina de Cardápio',
-    date: '29 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Rua Presidente Médici S/N, Feira do Produtor',
-    image: '/fotos/OFICINA DE CARDÁPIO - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Crie cardápios atrativos e lucrativos com técnicas de precificação e apresentação.',
-  },
-  {
-    id: 10,
-    title: 'Treinamento de Vendas',
-    date: '30 de abril',
-    time: '8h às 12h / 14h às 18h',
-    location: 'Avenida da Cooperativa, 496, São José',
-    image: '/fotos/TREINAMENTO DE VENDAS - FEED.png',
-    instructor: 'Istefanny Cardoso',
-    description: 'Desenvolva habilidades de vendas para aumentar seus resultados e fidelizar clientes.',
-  },
-];
+type HomeCourse = {
+  id: string;
+  name: string;
+  starts_at: string;
+  time_label: string | null;
+  location: string | null;
+  image_path: string | null;
+  facilitator: string | null;
+  description: string | null;
+  is_active: boolean;
+};
 
 const CoursesCarousel = () => {
+  const bucket = 'courses-images';
   const navigate = useNavigate();
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
+
+  const coursesQuery = useQuery({
+    queryKey: ['home_courses'],
+    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const supabase = requireSupabase();
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id,name,starts_at,time_label,location,image_path,facilitator,description,is_active')
+        .eq('is_active', true)
+        .order('starts_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as HomeCourse[];
+    },
+  });
+
+  const courses = useMemo(() => {
+    if (!isSupabaseConfigured) return [];
+    const supabase = requireSupabase();
+    return (coursesQuery.data ?? []).map((course) => {
+      const imageUrl = course.image_path
+        ? supabase.storage.from(bucket).getPublicUrl(course.image_path).data.publicUrl
+        : null;
+      const startsAt = new Date(course.starts_at);
+      const dateLabel = Number.isNaN(startsAt.getTime())
+        ? course.starts_at
+        : startsAt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+      return {
+        ...course,
+        imageUrl,
+        dateLabel,
+      };
+    });
+  }, [coursesQuery.data, isSupabaseConfigured]);
 
   useEffect(() => {
     if (!api) return;
@@ -128,6 +75,13 @@ const CoursesCarousel = () => {
     navigate('/registro');
   };
 
+  const toggleDescription = (courseId: string) => {
+    setExpandedDescriptions((prev) => ({
+      ...prev,
+      [courseId]: !prev[courseId],
+    }));
+  };
+
   return (
     <section id="cursos" className="py-20 bg-white">
       <div className="container mx-auto px-4">
@@ -141,12 +95,17 @@ const CoursesCarousel = () => {
               Cursos do Evento
             </h2>
             <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-              10 cursos de aprendizado prático com a chef <strong className="text-blue-500">Istefanny Cardoso</strong>
+              Cursos cadastrados pelo admin com datas, palestrantes e imagens atualizadas.
             </p>
           </div>
 
           {/* Carousel */}
           <div className="relative">
+            {coursesQuery.isError && (
+              <div className="mb-6 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
+                Erro ao carregar cursos. Tente novamente em instantes.
+              </div>
+            )}
             <Carousel
               setApi={setApi}
               opts={{
@@ -165,37 +124,68 @@ const CoursesCarousel = () => {
                 {courses.map((course) => (
                   <CarouselItem key={course.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
                     <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-300 max-w-sm mx-auto">
-                      {/* Course Image - formato original */}
-                      <div className="w-full">
-                        <img
-                          src={course.image}
-                          alt={course.title}
-                          className="w-full h-auto object-contain"
-                        />
+                      <div className="w-full bg-slate-100">
+                        <div className="aspect-[4/5]">
+                          {course.imageUrl ? (
+                            <img
+                              src={course.imageUrl}
+                              alt={course.name}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xs text-slate-500">
+                              Imagem não cadastrada
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Course Info */}
                       <div className="p-4 md:p-5">
                         <h3 className="font-display text-lg md:text-xl font-bold text-slate-800 mb-2">
-                          {course.title}
+                          {course.name}
                         </h3>
-                        
-                        <p className="text-slate-500 mb-4 leading-relaxed text-sm">
-                          {course.description}
-                        </p>
+
+                        {course.facilitator && (
+                          <p className="text-sm font-medium text-blue-600 mb-2">
+                            Palestrante: {course.facilitator}
+                          </p>
+                        )}
+
+                        {course.description && (
+                          <div className="mb-4">
+                            <p
+                              className={`text-slate-500 leading-relaxed text-sm ${
+                                expandedDescriptions[course.id] ? '' : 'line-clamp-3'
+                              }`}
+                            >
+                              {course.description}
+                            </p>
+                            {course.description.length > 140 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleDescription(course.id)}
+                                className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                              >
+                                {expandedDescriptions[course.id] ? 'Ver menos' : 'Ver mais'}
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap gap-3 mb-6">
                           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-lg">
                             <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                            <span className="text-xs md:text-sm text-slate-600 font-medium">{course.date}</span>
+                            <span className="text-xs md:text-sm text-slate-600 font-medium">{course.dateLabel}</span>
                           </div>
                           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-lg">
                             <Clock className="w-3.5 h-3.5 text-blue-500" />
-                            <span className="text-xs md:text-sm text-slate-600 font-medium">{course.time}</span>
+                            <span className="text-xs md:text-sm text-slate-600 font-medium">{course.time_label || '-'}</span>
                           </div>
                           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-lg">
                             <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-xs md:text-sm text-slate-500 font-medium truncate max-w-[200px]">{course.location}</span>
+                            <span className="text-xs md:text-sm text-slate-500 font-medium truncate max-w-[200px]">{course.location || '-'}</span>
                           </div>
                         </div>
 
@@ -246,6 +236,11 @@ const CoursesCarousel = () => {
                 </button>
               </div>
             </Carousel>
+            {!coursesQuery.isLoading && courses.length === 0 && (
+              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                Nenhum curso ativo cadastrado no momento.
+              </div>
+            )}
           </div>
 
 

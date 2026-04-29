@@ -9,6 +9,13 @@ export type FullExportRow = {
   course: string;
 };
 
+export type DisparoExportRow = {
+  Name: string;
+  Email: string;
+  Phone: string;
+  Tags: string;
+};
+
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
 export const formatDateDDMMYYYY = (value: string) => {
@@ -31,6 +38,45 @@ export const buildDisparoXlsxBlob = (rows: Array<{ name: string; phone: string }
 
   const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+};
+
+export const buildDisparoContactsXlsxBlob = (rows: DisparoExportRow[]) => {
+  const header: Array<keyof DisparoExportRow> = ['Name', 'Email', 'Phone', 'Tags'];
+  const data = rows.map((row) => [row.Name, row.Email, row.Phone, row.Tags]);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+
+  const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1:D1');
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+  ws['!cols'] = [{ wch: 26 }, { wch: 30 }, { wch: 18 }, { wch: 40 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Disparo');
+
+  const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+};
+
+const escapeCsvCell = (value: string) => {
+  const normalized = value ?? '';
+  if (/[",\n;]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+  return normalized;
+};
+
+export const buildDisparoContactsCsvBlob = (rows: DisparoExportRow[]) => {
+  const header = ['Name', 'Email', 'Phone', 'Tags'];
+  const lines = [header.join(',')];
+  for (const row of rows) {
+    lines.push([
+      escapeCsvCell(row.Name),
+      escapeCsvCell(row.Email),
+      escapeCsvCell(row.Phone),
+      escapeCsvCell(row.Tags),
+    ].join(','));
+  }
+  const csv = `\uFEFF${lines.join('\n')}`;
+  return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 };
 
 export const buildFullWorkbookArrayBuffer = (rows: FullExportRow[]) => {

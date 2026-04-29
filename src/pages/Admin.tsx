@@ -44,6 +44,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {
@@ -68,8 +69,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { buildDisparoXlsxBlob, buildFullWorkbookBlob, downloadBlob, type FullExportRow } from '@/lib/exports';
-import { normalizePhoneForWhatsApp } from '@/lib/phone';
+import {
+  buildDisparoContactsCsvBlob,
+  buildDisparoContactsXlsxBlob,
+  buildFullWorkbookBlob,
+  downloadBlob,
+  type DisparoExportRow,
+  type FullExportRow,
+} from '@/lib/exports';
+import { normalizePhoneForDisparo, normalizePhoneForWhatsApp } from '@/lib/phone';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 
 const ADMIN_EMAIL = 'admgestalt@gmail.com';
@@ -83,6 +91,11 @@ type CourseAvailability = {
   is_active: boolean;
   filled: number;
   remaining: number;
+  description?: string;
+  location?: string;
+  facilitator?: string;
+  time_label?: string;
+  image_path?: string | null;
 };
 
 type CourseInfo = {
@@ -145,6 +158,7 @@ const formatDateShort = (value: string) => {
 };
 
 const Admin = () => {
+  const COURSES_BUCKET = 'courses-images';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isAllowed, setIsAllowed] = useState(false);
@@ -154,6 +168,11 @@ const Admin = () => {
   const [exportFullDialogOpen, setExportFullDialogOpen] = useState(false);
   const [fullExportScope, setFullExportScope] = useState<'all' | 'course'>('all');
   const [fullExportCourseId, setFullExportCourseId] = useState('');
+  const [exportDisparoDialogOpen, setExportDisparoDialogOpen] = useState(false);
+  const [disparoExportStep, setDisparoExportStep] = useState<1 | 2>(1);
+  const [disparoExportScope, setDisparoExportScope] = useState<'all' | 'course'>('all');
+  const [disparoExportCourseId, setDisparoExportCourseId] = useState('');
+  const [disparoExportFormat, setDisparoExportFormat] = useState<'xlsx' | 'csv'>('xlsx');
 
   // Estados para edição de curso
   const [editingCourse, setEditingCourse] = useState<CourseAvailability | null>(null);
@@ -172,7 +191,13 @@ const Admin = () => {
     description: '',
     location: 'Sebrae - Parauapebas',
     facilitator: '',
+    time_label: '',
+    image_path: '',
   });
+  const [courseImageFile, setCourseImageFile] = useState<File | null>(null);
+  const [courseImagePreviewUrl, setCourseImagePreviewUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [courseFormStep, setCourseFormStep] = useState(1);
   const [deleteCourseTarget, setDeleteCourseTarget] = useState<CourseAvailability | null>(null);
 
   // Estados para controle global
@@ -482,12 +507,19 @@ const Admin = () => {
           starts_at: new Date(courseData.starts_at).toISOString(),
           capacity: parseInt(courseData.capacity, 10),
           is_active: courseData.is_active,
+          description: courseData.description.trim(),
+          location: courseData.location.trim(),
+          facilitator: courseData.facilitator.trim(),
+          time_label: courseData.time_label.trim(),
+          image_path: courseData.image_path.trim() || null,
         });
       if (error) throw error;
     },
     onSuccess: () => {
       setIsCourseFormOpen(false);
       resetCourseForm();
+      setCourseImageFile(null);
+      setCourseImagePreviewUrl('');
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
       queryClient.invalidateQueries({ queryKey: ['course_availability'] });
       toast({ title: 'Curso criado', description: 'O curso foi criado com sucesso.' });
@@ -509,6 +541,11 @@ const Admin = () => {
           starts_at: new Date(courseData.starts_at).toISOString(),
           capacity: parseInt(courseData.capacity, 10),
           is_active: courseData.is_active,
+          description: courseData.description.trim(),
+          location: courseData.location.trim(),
+          facilitator: courseData.facilitator.trim(),
+          time_label: courseData.time_label.trim(),
+          image_path: courseData.image_path.trim() || null,
         })
         .eq('id', courseData.originalId)
         .select();
@@ -522,6 +559,8 @@ const Admin = () => {
       setIsCourseFormOpen(false);
       setEditingCourseData(null);
       resetCourseForm();
+      setCourseImageFile(null);
+      setCourseImagePreviewUrl('');
       // Invalidar queries para atualizar UI
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
       queryClient.invalidateQueries({ queryKey: ['course_availability'] });
@@ -581,12 +620,45 @@ const Admin = () => {
       description: '',
       location: 'Sebrae - Parauapebas',
       facilitator: '',
+      time_label: '',
+      image_path: '',
     });
+  };
+  const totalCourseFormSteps = 4;
+
+  const getCourseStepLabel = (step: number) => {
+    if (step === 1) return 'Básicos';
+    if (step === 2) return 'Agenda e Local';
+    if (step === 3) return 'Descrição e Palestrante';
+    return 'Imagem e Revisão';
+  };
+
+  const getCoursePublicImageUrl = (imagePath?: string | null) => {
+    if (!imagePath) return '';
+    const supabase = requireSupabase();
+    const { data } = supabase.storage.from(COURSES_BUCKET).getPublicUrl(imagePath);
+    return data.publicUrl;
+  };
+
+  const uploadCourseImage = async (courseId: string, file: File) => {
+    const supabase = requireSupabase();
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '-');
+    const path = `${safeCourseId}/${Date.now()}.${extension}`;
+    const { error } = await supabase.storage.from(COURSES_BUCKET).upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+    });
+    if (error) throw error;
+    return path;
   };
 
   const openCreateCourseForm = () => {
     resetCourseForm();
     setEditingCourseData(null);
+    setCourseImageFile(null);
+    setCourseImagePreviewUrl('');
+    setCourseFormStep(1);
     setIsCourseFormOpen(true);
   };
 
@@ -598,56 +670,92 @@ const Admin = () => {
       starts_at: course.starts_at.slice(0, 16), // Format for datetime-local input
       capacity: course.capacity.toString(),
       is_active: course.is_active,
-      description: '',
-      location: 'Sebrae - Parauapebas',
-      facilitator: '',
+      description: course.description ?? '',
+      location: course.location ?? 'Sebrae - Parauapebas',
+      facilitator: course.facilitator ?? '',
+      time_label: course.time_label ?? '',
+      image_path: course.image_path ?? '',
     });
+    setCourseImageFile(null);
+    setCourseImagePreviewUrl(getCoursePublicImageUrl(course.image_path));
+    setCourseFormStep(1);
     setEditingCourseData(course);
     setIsCourseFormOpen(true);
   };
 
-  const handleSaveCourse = () => {
-    // Validação de campos obrigatórios
-    if (!courseFormData.id?.trim()) {
-      toast({ title: 'ID do curso obrigatório', description: 'Informe um identificador único para o curso.', variant: 'destructive' });
-      return;
-    }
-    if (!courseFormData.name?.trim()) {
-      toast({ title: 'Nome do curso obrigatório', description: 'Informe o nome do curso.', variant: 'destructive' });
-      return;
-    }
-    if (!courseFormData.starts_at) {
-      toast({ title: 'Data/hora obrigatória', description: 'Selecione a data e hora de início do curso.', variant: 'destructive' });
-      return;
-    }
-
-    // Validação de capacidade
-    const capacity = parseInt(courseFormData.capacity, 10);
-    if (isNaN(capacity) || capacity < 1) {
-      toast({ title: 'Capacidade inválida', description: 'A capacidade deve ser um número maior que 0.', variant: 'destructive' });
-      return;
-    }
-
-    // Validação de data
-    const startDate = new Date(courseFormData.starts_at);
-    if (isNaN(startDate.getTime())) {
-      toast({ title: 'Data inválida', description: 'Selecione uma data e hora válidas.', variant: 'destructive' });
-      return;
-    }
-
-    // Validação de ID em criação (não permitir duplicados)
-    if (!editingCourseData) {
-      const existingCourse = availabilityQuery.data?.find(c => c.course_id === courseFormData.id.trim());
-      if (existingCourse) {
-        toast({ title: 'ID já existe', description: 'Já existe um curso com este identificador.', variant: 'destructive' });
-        return;
+  const validateCourseStep = (step: number) => {
+    if (step === 1) {
+      if (!courseFormData.id?.trim()) {
+        toast({ title: 'ID do curso obrigatório', description: 'Informe um identificador único para o curso.', variant: 'destructive' });
+        return false;
+      }
+      if (!courseFormData.name?.trim()) {
+        toast({ title: 'Nome do curso obrigatório', description: 'Informe o nome do curso.', variant: 'destructive' });
+        return false;
+      }
+      if (!editingCourseData) {
+        const existingCourse = availabilityQuery.data?.find(c => c.course_id === courseFormData.id.trim());
+        if (existingCourse) {
+          toast({ title: 'ID já existe', description: 'Já existe um curso com este identificador.', variant: 'destructive' });
+          return false;
+        }
       }
     }
 
-    if (editingCourseData) {
-      updateCourseMutation.mutate({ ...courseFormData, originalId: editingCourseData.course_id });
-    } else {
-      createCourseMutation.mutate(courseFormData);
+    if (step === 2) {
+      if (!courseFormData.time_label?.trim()) {
+        toast({ title: 'Horário obrigatório', description: 'Informe o horário de realização do curso.', variant: 'destructive' });
+        return false;
+      }
+      if (!courseFormData.starts_at) {
+        toast({ title: 'Data/hora obrigatória', description: 'Selecione a data e hora de início do curso.', variant: 'destructive' });
+        return false;
+      }
+      const startDate = new Date(courseFormData.starts_at);
+      if (isNaN(startDate.getTime())) {
+        toast({ title: 'Data inválida', description: 'Selecione uma data e hora válidas.', variant: 'destructive' });
+        return false;
+      }
+      const capacity = parseInt(courseFormData.capacity, 10);
+      if (isNaN(capacity) || capacity < 1) {
+        toast({ title: 'Capacidade inválida', description: 'A capacidade deve ser um número maior que 0.', variant: 'destructive' });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleNextCourseStep = () => {
+    if (!validateCourseStep(courseFormStep)) return;
+    setCourseFormStep(prev => Math.min(totalCourseFormSteps, prev + 1));
+  };
+
+  const handlePrevCourseStep = () => {
+    setCourseFormStep(prev => Math.max(1, prev - 1));
+  };
+
+  const handleSaveCourse = async () => {
+    if (!validateCourseStep(1) || !validateCourseStep(2)) return;
+
+    try {
+      setIsUploadingImage(true);
+      let imagePath = courseFormData.image_path;
+      if (courseImageFile) {
+        imagePath = await uploadCourseImage(courseFormData.id.trim(), courseImageFile);
+      }
+
+      const payload = { ...courseFormData, image_path: imagePath };
+      if (editingCourseData) {
+        await updateCourseMutation.mutateAsync({ ...payload, originalId: editingCourseData.course_id });
+      } else {
+        await createCourseMutation.mutateAsync(payload);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Erro ao enviar imagem', description: message, variant: 'destructive' });
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -660,6 +768,14 @@ const Admin = () => {
     setFullExportScope('all');
     setFullExportCourseId(coursesForExportSelect[0]?.course_id ?? '');
     setExportFullDialogOpen(true);
+  };
+
+  const openExportDisparoDialog = () => {
+    setDisparoExportStep(1);
+    setDisparoExportScope('all');
+    setDisparoExportFormat('xlsx');
+    setDisparoExportCourseId(coursesForExportSelect[0]?.course_id ?? '');
+    setExportDisparoDialogOpen(true);
   };
 
   const handleConfirmFullExport = async () => {
@@ -712,19 +828,62 @@ const Admin = () => {
     }
   };
 
-  const handleDownloadDisparo = async () => {
+  const buildDisparoRows = (scope: 'all' | 'course', selectedCourseId?: string): DisparoExportRow[] => {
+    const map = new Map<string, DisparoExportRow & { tagsSet: Set<string> }>();
+    for (const row of registrationsQuery.data ?? []) {
+      const relevantCourses = scope === 'course'
+        ? row.registration_courses.filter((rc) => rc.course_id === selectedCourseId)
+        : row.registration_courses;
+
+      if (relevantCourses.length === 0) continue;
+
+      const phone = normalizePhoneForDisparo(row.phone);
+      const key = row.email.trim().toLowerCase() || row.id;
+      const tags = relevantCourses.map((rc) => rc.courses?.name?.trim() || rc.course_id).filter(Boolean);
+
+      if (!map.has(key)) {
+        map.set(key, {
+          Name: row.name.trim(),
+          Email: row.email.trim(),
+          Phone: phone,
+          Tags: '',
+          tagsSet: new Set<string>(tags),
+        });
+      } else {
+        const current = map.get(key)!;
+        for (const tag of tags) current.tagsSet.add(tag);
+      }
+    }
+
+    return Array.from(map.values()).map((item) => ({
+      Name: item.Name,
+      Email: item.Email,
+      Phone: item.Phone,
+      Tags: Array.from(item.tagsSet).join(';'),
+    }));
+  };
+
+  const handleConfirmDisparoExport = async () => {
     if (exporting) return;
-    if (exportRows.length === 0) {
-      toast({ title: 'Nada para exportar', description: 'Nenhuma inscrição foi encontrada.' });
+
+    if (disparoExportScope === 'course' && !disparoExportCourseId) {
+      toast({ title: 'Selecione um curso', description: 'Escolha um curso para o disparo.', variant: 'destructive' });
       return;
     }
 
-    const payload = exportRows.map((row) => ({ name: row.name, phone: normalizePhoneForWhatsApp(row.phone) }));
-    const invalidCount = payload.filter((row) => !row.name.trim() || !/^\d{12,13}$/.test(row.phone)).length;
+    const rows = buildDisparoRows(disparoExportScope, disparoExportCourseId);
+    if (rows.length === 0) {
+      toast({ title: 'Nada para exportar', description: 'Nenhum contato encontrado com este filtro.' });
+      return;
+    }
+
+    const invalidCount = rows.filter(
+      (row) => !row.Name.trim() || !row.Email.trim() || !row.Phone.trim() || !/^55\d{2}9\d{8}$/.test(row.Phone)
+    ).length;
     if (invalidCount > 0) {
       toast({
-        title: 'Telefones inválidos',
-        description: `${invalidCount} registro(s) possuem telefone inválido para disparo. Ajuste antes de exportar.`,
+        title: 'Dados inválidos para disparo',
+        description: `${invalidCount} contato(s) possuem Name/Email/Phone inválido. Ajuste os dados e tente novamente.`,
         variant: 'destructive',
       });
       return;
@@ -732,12 +891,19 @@ const Admin = () => {
 
     setExporting('disparo');
     try {
-      const blob = buildDisparoXlsxBlob(payload);
-      downloadBlob(`inscricoes-disparo-${new Date().toISOString().slice(0, 10)}.xlsx`, blob);
-      toast({ title: 'Download iniciado', description: 'Arquivo Excel para disparo gerado com sucesso.' });
+      const date = new Date().toISOString().slice(0, 10);
+      const scopeLabel = disparoExportScope === 'all'
+        ? 'todos-cursos'
+        : `curso-${disparoExportCourseId.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+      const isCsv = disparoExportFormat === 'csv';
+      const blob = isCsv ? buildDisparoContactsCsvBlob(rows) : buildDisparoContactsXlsxBlob(rows);
+      const filename = `disparo-${scopeLabel}-${date}.${isCsv ? 'csv' : 'xlsx'}`;
+      downloadBlob(filename, blob);
+      toast({ title: 'Download iniciado', description: `Arquivo ${isCsv ? 'CSV' : 'Excel'} gerado com sucesso.` });
+      setExportDisparoDialogOpen(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro inesperado';
-      toast({ title: 'Falha ao gerar Excel', description: message, variant: 'destructive' });
+      toast({ title: 'Falha ao gerar arquivo', description: message, variant: 'destructive' });
     } finally {
       setExporting(null);
     }
@@ -990,7 +1156,7 @@ const Admin = () => {
                 <Button type="button" variant="outline" onClick={openExportFullDialog} disabled={exporting !== null}>
                   {exporting === 'full' ? 'Gerando...' : 'Baixar Excel Completo'}
                 </Button>
-                <Button type="button" variant="outline" onClick={handleDownloadDisparo} disabled={exporting !== null}>
+                <Button type="button" variant="outline" onClick={openExportDisparoDialog} disabled={exporting !== null}>
                   {exporting === 'disparo' ? 'Gerando...' : 'Baixar Excel Disparo'}
                 </Button>
               </div>
@@ -1249,6 +1415,150 @@ const Admin = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={exportDisparoDialogOpen}
+        onOpenChange={(open) => {
+          setExportDisparoDialogOpen(open);
+          if (!open) setDisparoExportStep(1);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Baixar arquivo de disparo</DialogTitle>
+            <DialogDescription>
+              Passo {disparoExportStep} de 2
+            </DialogDescription>
+          </DialogHeader>
+
+          {disparoExportStep === 1 && (
+            <div className="space-y-4 py-2">
+              <RadioGroup
+                value={disparoExportScope}
+                onValueChange={(v) => {
+                  const next = v as 'all' | 'course';
+                  setDisparoExportScope(next);
+                  if (next === 'course' && coursesForExportSelect[0]) {
+                    setDisparoExportCourseId((prev) =>
+                      prev && coursesForExportSelect.some((c) => c.course_id === prev)
+                        ? prev
+                        : coursesForExportSelect[0].course_id
+                    );
+                  }
+                }}
+                className="space-y-3"
+              >
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="all" id="disparo-scope-all" className="mt-1" />
+                  <div>
+                    <Label htmlFor="disparo-scope-all" className="cursor-pointer font-medium">
+                      Todos os cursos
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Agrupa por contato e junta os cursos em Tags.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="course" id="disparo-scope-course" className="mt-1" />
+                  <div className="min-w-0 flex-1">
+                    <Label htmlFor="disparo-scope-course" className="cursor-pointer font-medium">
+                      Apenas um curso
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Exporta contatos vinculados ao curso selecionado.
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+
+              {disparoExportScope === 'course' && (
+                <div className="space-y-2 pl-0.5">
+                  <Label htmlFor="disparo-course-select">Curso</Label>
+                  {availabilityQuery.isLoading ? (
+                    <p className="text-sm text-muted-foreground">Carregando cursos...</p>
+                  ) : coursesForExportSelect.length === 0 ? (
+                    <p className="text-sm text-destructive">Nenhum curso cadastrado.</p>
+                  ) : (
+                    <Select value={disparoExportCourseId} onValueChange={setDisparoExportCourseId}>
+                      <SelectTrigger id="disparo-course-select">
+                        <SelectValue placeholder="Selecione o curso" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {coursesForExportSelect.map((c) => (
+                          <SelectItem key={c.course_id} value={c.course_id}>
+                            {c.name} — {formatDateTime(c.starts_at)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {disparoExportStep === 2 && (
+            <div className="space-y-4 py-2">
+              <RadioGroup
+                value={disparoExportFormat}
+                onValueChange={(v) => setDisparoExportFormat(v as 'xlsx' | 'csv')}
+                className="space-y-3"
+              >
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="xlsx" id="disparo-format-xlsx" className="mt-1" />
+                  <div>
+                    <Label htmlFor="disparo-format-xlsx" className="cursor-pointer font-medium">
+                      Excel (.xlsx)
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Colunas: Name, Email, Phone, Tags.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="csv" id="disparo-format-csv" className="mt-1" />
+                  <div>
+                    <Label htmlFor="disparo-format-csv" className="cursor-pointer font-medium">
+                      CSV (.csv)
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Mesmo layout do Excel para integração.
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setExportDisparoDialogOpen(false)}>
+              Cancelar
+            </Button>
+            {disparoExportStep === 2 && (
+              <Button type="button" variant="outline" onClick={() => setDisparoExportStep(1)}>
+                Voltar
+              </Button>
+            )}
+            {disparoExportStep === 1 ? (
+              <Button
+                type="button"
+                onClick={() => setDisparoExportStep(2)}
+                disabled={
+                  disparoExportScope === 'course' &&
+                  (availabilityQuery.isLoading || !disparoExportCourseId || coursesForExportSelect.length === 0)
+                }
+              >
+                Próximo
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleConfirmDisparoExport} disabled={exporting !== null}>
+                {exporting === 'disparo' ? 'Gerando...' : 'Baixar'}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog de Edição de Vagas */}
       <Dialog open={Boolean(editingCourse)} onOpenChange={() => setEditingCourse(null)}>
         <DialogContent>
@@ -1354,18 +1664,44 @@ const Admin = () => {
       </AlertDialog>
 
       {/* Dialog de Formulário de Curso (Criar/Editar) */}
-      <Dialog open={isCourseFormOpen} onOpenChange={setIsCourseFormOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog
+        open={isCourseFormOpen}
+        onOpenChange={(open) => {
+          setIsCourseFormOpen(open);
+          if (!open) {
+            setCourseImageFile(null);
+            setCourseImagePreviewUrl('');
+            setCourseFormStep(1);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl p-0 sm:max-h-[90vh] sm:overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{editingCourseData ? 'Editar Curso' : 'Novo Curso'}</DialogTitle>
-            <DialogDescription>
-              {editingCourseData 
-                ? 'Atualize as informações do curso existente.' 
-                : 'Preencha as informações para criar um novo curso.'}
-            </DialogDescription>
+            <div className="border-b px-4 pb-4 pt-5 sm:px-6">
+              <DialogTitle>{editingCourseData ? 'Editar Curso' : 'Novo Curso'}</DialogTitle>
+              <DialogDescription>
+                {editingCourseData
+                  ? 'Atualize as informações do curso existente em etapas.'
+                  : 'Preencha as informações do curso em um passo a passo.'}
+              </DialogDescription>
+              <div className="mt-4">
+                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Etapa {courseFormStep} de {totalCourseFormSteps}</span>
+                  <span>{getCourseStepLabel(courseFormStep)}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${(courseFormStep / totalCourseFormSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
+          <div className="max-h-[62vh] space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+            {courseFormStep === 1 && (
+              <>
+                <div>
               <Label htmlFor="course-id">ID do Curso *</Label>
               <Input
                 id="course-id"
@@ -1399,7 +1735,22 @@ const Admin = () => {
                 className="mt-1"
               />
             </div>
-            <div>
+              </>
+            )}
+
+            {courseFormStep === 2 && (
+              <>
+                <div>
+                  <Label htmlFor="course-time-label">Horário do Curso *</Label>
+                  <Input
+                    id="course-time-label"
+                    placeholder="ex: 14h às 17h30"
+                    value={courseFormData.time_label}
+                    onChange={(e) => setCourseFormData({ ...courseFormData, time_label: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
               <Label htmlFor="course-date">Data e Hora de Início *</Label>
               <Input
                 id="course-date"
@@ -1409,38 +1760,128 @@ const Admin = () => {
                 className="mt-1"
               />
             </div>
-            <div>
-              <Label htmlFor="course-capacity">Capacidade (vagas)</Label>
+                <div>
+              <Label htmlFor="course-location">Local</Label>
               <Input
-                id="course-capacity"
-                type="number"
-                min="1"
-                value={courseFormData.capacity}
-                onChange={(e) => setCourseFormData({ ...courseFormData, capacity: e.target.value })}
+                id="course-location"
+                placeholder="Local do curso"
+                value={courseFormData.location}
+                onChange={(e) => setCourseFormData({ ...courseFormData, location: e.target.value })}
                 className="mt-1"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="course-active"
-                checked={courseFormData.is_active}
-                onCheckedChange={(checked) => setCourseFormData({ ...courseFormData, is_active: checked })}
+                <div>
+                  <Label htmlFor="course-capacity">Capacidade (vagas)</Label>
+                  <Input
+                    id="course-capacity"
+                    type="number"
+                    min="1"
+                    value={courseFormData.capacity}
+                    onChange={(e) => setCourseFormData({ ...courseFormData, capacity: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2 rounded-md border p-3">
+                  <Switch
+                    id="course-active"
+                    checked={courseFormData.is_active}
+                    onCheckedChange={(checked) => setCourseFormData({ ...courseFormData, is_active: checked })}
+                  />
+                  <Label htmlFor="course-active">Curso ativo (aceitando inscrições)</Label>
+                </div>
+              </>
+            )}
+
+            {courseFormStep === 3 && (
+              <>
+                <div>
+                  <Label htmlFor="course-facilitator">Palestrante</Label>
+                  <Input
+                    id="course-facilitator"
+                    placeholder="Nome de quem vai palestrar"
+                    value={courseFormData.facilitator}
+                    onChange={(e) => setCourseFormData({ ...courseFormData, facilitator: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+              <Label htmlFor="course-description">Descrição</Label>
+              <Textarea
+                id="course-description"
+                placeholder="Descrição para aparecer na Home"
+                value={courseFormData.description}
+                onChange={(e) => setCourseFormData({ ...courseFormData, description: e.target.value })}
+                className="mt-1 min-h-24"
               />
-              <Label htmlFor="course-active">Curso ativo (aceitando inscrições)</Label>
             </div>
+              </>
+            )}
+
+            {courseFormStep === 4 && (
+              <>
+                <div>
+              <Label htmlFor="course-image">Imagem do Curso (1080x1350)</Label>
+              <Input
+                id="course-image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setCourseImageFile(file);
+                  if (file) {
+                    const localUrl = URL.createObjectURL(file);
+                    setCourseImagePreviewUrl(localUrl);
+                  } else {
+                    setCourseImagePreviewUrl(getCoursePublicImageUrl(courseFormData.image_path));
+                  }
+                }}
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Use imagens no formato 4:5 (1080x1350) para manter todos os cards iguais na Home.
+              </p>
+              {courseImagePreviewUrl && (
+                <div className="mt-3 w-40 overflow-hidden rounded-lg border border-border">
+                  <div className="aspect-[4/5]">
+                    <img src={courseImagePreviewUrl} alt="Prévia do curso" className="h-full w-full object-cover" />
+                  </div>
+                </div>
+              )}
+            </div>
+                <div className="rounded-lg border bg-muted/20 p-4 text-sm">
+                  <p className="font-semibold text-foreground">Revisão rápida</p>
+                  <p className="mt-2 text-muted-foreground"><span className="font-medium text-foreground">Curso:</span> {courseFormData.name || '-'}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Data/Hora:</span> {courseFormData.starts_at || '-'} · {courseFormData.time_label || '-'}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Local:</span> {courseFormData.location || '-'}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Palestrante:</span> {courseFormData.facilitator || '-'}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Descrição:</span> {courseFormData.description ? `${courseFormData.description.slice(0, 100)}${courseFormData.description.length > 100 ? '...' : ''}` : '-'}</p>
+                </div>
+              </>
+            )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t px-4 py-4 sm:px-6">
             <Button variant="outline" onClick={() => setIsCourseFormOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleSaveCourse}
-              disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
-            >
-              {createCourseMutation.isPending || updateCourseMutation.isPending 
-                ? 'Salvando...' 
-                : editingCourseData ? 'Atualizar' : 'Criar'}
-            </Button>
+            {courseFormStep > 1 && (
+              <Button variant="outline" onClick={handlePrevCourseStep}>
+                Voltar
+              </Button>
+            )}
+            {courseFormStep < totalCourseFormSteps ? (
+              <Button onClick={handleNextCourseStep}>
+                Próximo
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSaveCourse}
+                disabled={createCourseMutation.isPending || updateCourseMutation.isPending || isUploadingImage}
+              >
+                {createCourseMutation.isPending || updateCourseMutation.isPending || isUploadingImage
+                  ? 'Salvando...'
+                  : editingCourseData ? 'Atualizar' : 'Criar'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
