@@ -500,59 +500,11 @@ const Admin = () => {
   const bulkDeleteRegistrationsMutation = useMutation({
     mutationFn: async ({ scope, courseId }: { scope: 'all' | 'course'; courseId?: string }) => {
       const supabase = requireSupabase();
-
-      if (scope === 'all') {
-        const { error: relError } = await supabase
-          .from('registration_courses')
-          .delete()
-          .neq('registration_id', '');
-        if (relError) throw relError;
-
-        const { error: regError } = await supabase
-          .from('registrations')
-          .delete()
-          .neq('id', '');
-        if (regError) throw regError;
-        return;
-      }
-
-      if (!courseId) {
-        throw new Error('Selecione um curso para excluir as inscrições.');
-      }
-
-      const { data: linkedRows, error: linkedRowsError } = await supabase
-        .from('registration_courses')
-        .select('registration_id')
-        .eq('course_id', courseId);
-      if (linkedRowsError) throw linkedRowsError;
-
-      const registrationIds = Array.from(new Set((linkedRows ?? []).map((row) => row.registration_id)));
-      if (registrationIds.length === 0) {
-        return;
-      }
-
-      const { error: deleteByCourseError } = await supabase
-        .from('registration_courses')
-        .delete()
-        .eq('course_id', courseId);
-      if (deleteByCourseError) throw deleteByCourseError;
-
-      const { data: remainingLinks, error: remainingLinksError } = await supabase
-        .from('registration_courses')
-        .select('registration_id')
-        .in('registration_id', registrationIds);
-      if (remainingLinksError) throw remainingLinksError;
-
-      const remainingIds = new Set((remainingLinks ?? []).map((row) => row.registration_id));
-      const orphanRegistrationIds = registrationIds.filter((id) => !remainingIds.has(id));
-
-      if (orphanRegistrationIds.length > 0) {
-        const { error: deleteOrphanError } = await supabase
-          .from('registrations')
-          .delete()
-          .in('id', orphanRegistrationIds);
-        if (deleteOrphanError) throw deleteOrphanError;
-      }
+      const { error } = await supabase.rpc('admin_bulk_delete_registrations', {
+        p_scope: scope,
+        p_course_id: scope === 'course' ? courseId ?? null : null,
+      });
+      if (error) throw error;
     },
     onSuccess: async (_, variables) => {
       setBulkDeleteDialogOpen(false);
@@ -657,11 +609,9 @@ const Admin = () => {
   const deleteCourseMutation = useMutation({
     mutationFn: async (courseId: string) => {
       const supabase = requireSupabase();
-
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', courseId);
+      const { error } = await supabase.rpc('admin_delete_course_with_registrations', {
+        p_course_id: courseId,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
