@@ -13,6 +13,8 @@ export type SiteSettings = {
   cta_primary_label: string | null;
   cta_primary_url: string | null;
   hours_label: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   theme_primary: string | null;
   theme_secondary: string | null;
   theme_accent: string | null;
@@ -44,6 +46,9 @@ export const defaultSiteSettings: SiteSettings = {
   cta_primary_label: 'Inscreva-se Agora',
   cta_primary_url: '/registro',
   hours_label: '8h por curso',
+  seo_title: 'Workshop de Vendas Online | Parauapebas - Cursos Gratuitos',
+  seo_description:
+    'Capacitação gratuita em vendas digitais. Aprenda produtos digitais, páginas de vendas, criativos e tráfego pago.',
   theme_primary: '#3b82f6',
   theme_secondary: '#eff6ff',
   theme_accent: '#2563eb',
@@ -153,6 +158,20 @@ export const useApplySiteTheme = (settings: SiteSettings | undefined) => {
         document.head.appendChild(link);
       }
       link.href = faviconUrl;
+    }
+
+    if (settings.seo_title?.trim()) {
+      document.title = settings.seo_title.trim();
+    }
+
+    if (settings.seo_description?.trim()) {
+      let descriptionMeta = document.querySelector("meta[name='description']") as HTMLMetaElement | null;
+      if (!descriptionMeta) {
+        descriptionMeta = document.createElement('meta');
+        descriptionMeta.name = 'description';
+        document.head.appendChild(descriptionMeta);
+      }
+      descriptionMeta.content = settings.seo_description.trim();
     }
   }, [settings]);
 };

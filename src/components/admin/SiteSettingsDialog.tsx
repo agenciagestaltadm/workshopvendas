@@ -78,6 +78,8 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         cta_primary_label: current.cta_primary_label,
         cta_primary_url: current.cta_primary_url,
         hours_label: current.hours_label,
+        seo_title: current.seo_title,
+        seo_description: current.seo_description,
         theme_primary: current.theme_primary,
         theme_secondary: current.theme_secondary,
         theme_accent: current.theme_accent,
@@ -223,6 +225,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
               <TabsList className="mb-4 w-full justify-start overflow-x-auto">
                 <TabsTrigger value="branding">Branding</TabsTrigger>
                 <TabsTrigger value="content">Home Content</TabsTrigger>
+                <TabsTrigger value="seo">SEO</TabsTrigger>
                 <TabsTrigger value="theme">Theme Tokens</TabsTrigger>
                 <TabsTrigger value="fields">Campos de Inscrição</TabsTrigger>
               </TabsList>
@@ -339,6 +342,29 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                 <div>
                   <Label>Texto de horas por curso</Label>
                   <Input value={current.hours_label ?? ''} onChange={(e) => setDraft({ ...current, hours_label: e.target.value })} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="seo" className="space-y-4">
+                <div>
+                  <Label>Título SEO (texto ao lado do favicon)</Label>
+                  <Input
+                    value={current.seo_title ?? ''}
+                    onChange={(e) => setDraft({ ...current, seo_title: e.target.value })}
+                    placeholder="Título da aba do navegador"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Esse é o texto que aparece na aba do navegador, ao lado do favicon.
+                  </p>
+                </div>
+                <div>
+                  <Label>Descrição SEO</Label>
+                  <Textarea
+                    value={current.seo_description ?? ''}
+                    onChange={(e) => setDraft({ ...current, seo_description: e.target.value })}
+                    className="min-h-20"
+                    placeholder="Descrição da página para mecanismos de busca."
+                  />
                 </div>
               </TabsContent>
 
