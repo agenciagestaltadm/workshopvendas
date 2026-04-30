@@ -1,8 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Sparkles } from 'lucide-react';
 import { NavBar } from '@/components/ui/tubelight-navbar';
+import { SiteSettings, defaultSiteSettings, getSiteAssetUrl } from '@/lib/site-settings';
 
-const Navbar = () => {
+type Props = {
+  settings?: SiteSettings;
+};
+
+const Navbar = ({ settings = defaultSiteSettings }: Props) => {
   const navigate = useNavigate();
 
   const navItems = [
@@ -25,8 +30,8 @@ const Navbar = () => {
     <NavBar
       items={navItems}
       onItemClick={handleItemClick}
-      leadingImageSrc="/LogoCanaãGastronomia.png"
-      leadingImageAlt="Canaã Gastronomia 2026"
+      leadingImageSrc={getSiteAssetUrl(settings.logo_nav_path) ?? '/LogoCanaãGastronomia.png'}
+      leadingImageAlt="Logo do evento"
     />
   );
 };

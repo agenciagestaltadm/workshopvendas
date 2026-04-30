@@ -80,16 +80,16 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
                 'relative rounded-xl border-2 p-4 text-left transition-all duration-200',
                 'hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isSelected 
-                  ? 'border-[#7ED321] bg-[#7ED321]/10 shadow-md' 
-                  : 'border-border bg-card hover:border-[#7ED321]/50',
+                  ? 'border-primary bg-primary/10 shadow-md' 
+                  : 'border-border bg-card hover:border-primary/50',
                 (disabled || isSoldOut || isPaused) && 'cursor-not-allowed opacity-60',
                 isSoldOut && 'border-destructive/30',
-                isPaused && 'border-gray-400 bg-gray-100'
+                isPaused && 'border-border bg-muted'
               )}
             >
               {/* Checkmark quando selecionado */}
               {isSelected && (
-                <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#7ED321] text-white shadow-sm">
+                <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
                   <Check className="h-4 w-4" />
                 </div>
               )}
@@ -99,7 +99,7 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
                 <Badge
                   className={cn(
                     'border-transparent text-xs',
-                    isPaused && 'bg-gray-500 text-white',
+                    isPaused && 'bg-muted-foreground text-background',
                     !isPaused && status === 'sold_out' && 'bg-destructive text-destructive-foreground',
                     !isPaused && status === 'last_spots' && 'bg-amber-500 text-black',
                     !isPaused && status === 'available' && 'bg-emerald-600 text-white'
@@ -143,7 +143,7 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
                     <div 
                       className={cn(
                         'h-full rounded-full transition-all duration-500',
-                        status === 'last_spots' ? 'bg-amber-500' : 'bg-[#7ED321]'
+                        status === 'last_spots' ? 'bg-amber-500' : 'bg-primary'
                       )}
                       style={{ 
                         width: `${Math.min(100, ((course.capacity - course.remaining) / course.capacity) * 100)}%` 
@@ -166,11 +166,11 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
 
       {/* Resumo da seleção */}
       {selectedIds.length > 0 && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm font-medium text-slate-800">
+        <div className="rounded-xl border border-border bg-secondary p-4">
+          <p className="text-sm font-medium text-foreground">
             Curso selecionado
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Clique em outro curso para alterar sua seleção.
           </p>
         </div>

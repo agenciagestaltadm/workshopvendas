@@ -41,15 +41,15 @@ const Thanks = () => {
   const hasCourses = courses.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-background">
       <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-5xl">
-          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-2xl border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
             <div className="flex justify-start pl-2">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full px-5 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                className="rounded-full px-5 border-border text-foreground hover:bg-secondary"
                 onClick={() => navigate('/')}
               >
                 Voltar
@@ -75,7 +75,7 @@ const Thanks = () => {
           <div
             className={[
               'mx-auto flex h-16 w-16 items-center justify-center rounded-full',
-              'bg-blue-50 text-blue-500',
+              'bg-secondary text-primary',
               'transition-all duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-95 opacity-0',
             ].join(' ')}
@@ -86,7 +86,7 @@ const Thanks = () => {
 
           <h1
             className={[
-              'mt-6 font-display text-3xl font-bold text-slate-800 sm:text-4xl',
+              'mt-6 font-display text-3xl font-bold text-foreground sm:text-4xl',
               'transition-all duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
@@ -95,7 +95,7 @@ const Thanks = () => {
           </h1>
           <p
             className={[
-              'mt-3 text-slate-500',
+              'mt-3 text-muted-foreground',
               'transition-all delay-100 duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
@@ -108,35 +108,35 @@ const Thanks = () => {
           {(hasCourses || state.registrationId) && (
             <div
               className={[
-                'mt-10 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm',
+              'mt-10 rounded-2xl border border-border bg-card p-6 text-left shadow-sm',
                 'transition-all delay-200 duration-700 ease-out motion-reduce:transition-none',
                 isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
               ].join(' ')}
             >
               {state.name && (
-                <p className="text-sm text-slate-500">
-                  Nome: <span className="font-semibold text-slate-800">{state.name}</span>
+                <p className="text-sm text-muted-foreground">
+                  Nome: <span className="font-semibold text-foreground">{state.name}</span>
                 </p>
               )}
 
               {hasCourses && (
                 <div className={state.name ? 'mt-4' : ''}>
-                  <p className="text-sm font-medium text-slate-800 mb-3">
+                  <p className="text-sm font-medium text-foreground mb-3">
                     {courses.length === 1 ? 'Curso selecionado:' : `${courses.length} cursos selecionados:`}
                   </p>
                   <div className="space-y-2">
                     {courses.map((course, index) => (
                       <div 
                         key={course.id} 
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                        className="rounded-xl border border-border bg-secondary p-3"
                       >
                         <div className="flex items-start gap-2">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-bold">
                             {index + 1}
                           </span>
                           <div>
-                            <p className="text-sm font-medium text-slate-800">{course.name}</p>
-                            <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                            <p className="text-sm font-medium text-foreground">{course.name}</p>
+                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3" />
                               {formatDateTime(course.startsAt)}
                             </p>
@@ -149,8 +149,8 @@ const Thanks = () => {
               )}
 
               {state.registrationId && (
-                <p className="mt-4 text-sm text-slate-500 pt-4 border-t border-slate-200">
-                  Protocolo: <span className="font-semibold text-slate-800">{state.registrationId}</span>
+                <p className="mt-4 text-sm text-muted-foreground pt-4 border-t border-border">
+                  Protocolo: <span className="font-semibold text-foreground">{state.registrationId}</span>
                 </p>
               )}
             </div>
@@ -158,12 +158,12 @@ const Thanks = () => {
 
           <div
             className={[
-              'mt-8 p-4 rounded-xl bg-blue-50 border border-blue-100',
+              'mt-8 p-4 rounded-xl bg-secondary border border-border',
               'transition-all delay-300 duration-700 ease-out motion-reduce:transition-none',
               isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             ].join(' ')}
           >
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Você receberá mais informações por e-mail ou WhatsApp em breve.
             </p>
           </div>

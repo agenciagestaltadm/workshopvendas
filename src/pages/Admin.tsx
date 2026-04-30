@@ -19,7 +19,8 @@ import {
   X,
   Plus,
   Calendar,
-  Clock
+  Clock,
+  Settings
 } from 'lucide-react';
 
 import Footer from '@/components/Footer';
@@ -79,6 +80,7 @@ import {
 } from '@/lib/exports';
 import { normalizePhoneForDisparo, normalizePhoneForWhatsApp } from '@/lib/phone';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
+import { SiteSettingsDialog } from '@/components/admin/SiteSettingsDialog';
 
 const ADMIN_EMAIL = 'admgestalt@gmail.com';
 
@@ -116,12 +118,31 @@ type RegistrationRow = {
   phone: string;
   document: string;
   registration_courses: RegistrationCourse[];
+  registration_field_answers?: Array<{
+    field_key: string;
+    value_json: unknown;
+  }>;
+};
+
+type RegistrationFormFieldDef = {
+  field_key: string;
+  label: string;
+  sort_order: number;
 };
 
 const formatDateTime = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+};
+
+const formatCustomFieldValue = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map((item) => formatCustomFieldValue(item)).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
 };
 
 /** Gera linhas de export. Com `filterCourseId`, inclui só inscrições nesse curso e a coluna Curso reflete só esse curso. */
@@ -139,6 +160,12 @@ const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId
       return date ? `${courseName} (${date})` : courseName;
     });
     const course = courseParts.length > 0 ? courseParts.join('; ') : 'Nenhum curso';
+    const customFields = Object.fromEntries(
+      (row.registration_field_answers ?? []).map((answer) => [
+        answer.field_key,
+        formatCustomFieldValue(answer.value_json),
+      ]),
+    );
     out.push({
       createdAt: row.created_at,
       name: row.name,
@@ -146,6 +173,7 @@ const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId
       phone: row.phone,
       document: row.document,
       course,
+      customFields,
     });
   }
   return out;
@@ -176,6 +204,7 @@ const Admin = () => {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteScope, setBulkDeleteScope] = useState<'all' | 'course'>('all');
   const [bulkDeleteCourseId, setBulkDeleteCourseId] = useState('');
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   // Estados para edição de curso
   const [editingCourse, setEditingCourse] = useState<CourseAvailability | null>(null);
@@ -293,6 +322,10 @@ const Admin = () => {
           registration_courses(
             course_id,
             courses(name, starts_at)
+          ),
+          registration_field_answers(
+            field_key,
+            value_json
           )
         `)
         .order('created_at', { ascending: false });
@@ -307,6 +340,21 @@ const Admin = () => {
         console.log('[Admin] Inscrições carregadas:', data?.length ?? 0);
       }
       return (data ?? []) as unknown as RegistrationRow[];
+    },
+  });
+
+  const registrationFieldDefsQuery = useQuery({
+    queryKey: ['admin_registration_field_defs'],
+    enabled: isAllowed,
+    queryFn: async () => {
+      const supabase = requireSupabase();
+      const { data, error } = await supabase
+        .from('registration_form_fields')
+        .select('field_key,label,sort_order')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as RegistrationFormFieldDef[];
     },
   });
 
@@ -500,11 +548,63 @@ const Admin = () => {
   const bulkDeleteRegistrationsMutation = useMutation({
     mutationFn: async ({ scope, courseId }: { scope: 'all' | 'course'; courseId?: string }) => {
       const supabase = requireSupabase();
-      const { error } = await supabase.rpc('admin_bulk_delete_registrations', {
-        p_scope: scope,
-        p_course_id: scope === 'course' ? courseId ?? null : null,
-      });
-      if (error) throw error;
+      const rpcPayload =
+        scope === 'course'
+          ? { p_scope: scope, p_course_id: courseId ?? null }
+          : { p_scope: scope };
+      const { error } = await supabase.rpc('admin_bulk_delete_registrations', rpcPayload);
+      if (!error) return;
+
+      // Fallback para ambientes onde a RPC ainda não foi aplicada.
+      if (scope === 'all') {
+        const { error: relError } = await supabase
+          .from('registration_courses')
+          .delete()
+          .not('registration_id', 'is', null);
+        if (relError) throw relError;
+
+        const { error: regError } = await supabase
+          .from('registrations')
+          .delete()
+          .not('id', 'is', null);
+        if (regError) throw regError;
+        return;
+      }
+
+      if (!courseId) {
+        throw new Error('Selecione um curso para excluir as inscrições.');
+      }
+
+      const { data: linkedRows, error: linkedRowsError } = await supabase
+        .from('registration_courses')
+        .select('registration_id')
+        .eq('course_id', courseId);
+      if (linkedRowsError) throw linkedRowsError;
+
+      const registrationIds = Array.from(new Set((linkedRows ?? []).map((row) => row.registration_id)));
+      if (registrationIds.length === 0) return;
+
+      const { error: deleteByCourseError } = await supabase
+        .from('registration_courses')
+        .delete()
+        .eq('course_id', courseId);
+      if (deleteByCourseError) throw deleteByCourseError;
+
+      const { data: remainingLinks, error: remainingLinksError } = await supabase
+        .from('registration_courses')
+        .select('registration_id')
+        .in('registration_id', registrationIds);
+      if (remainingLinksError) throw remainingLinksError;
+
+      const remainingIds = new Set((remainingLinks ?? []).map((row) => row.registration_id));
+      const orphanRegistrationIds = registrationIds.filter((id) => !remainingIds.has(id));
+      if (orphanRegistrationIds.length === 0) return;
+
+      const { error: deleteOrphanError } = await supabase
+        .from('registrations')
+        .delete()
+        .in('id', orphanRegistrationIds);
+      if (deleteOrphanError) throw deleteOrphanError;
     },
     onSuccess: async (_, variables) => {
       setBulkDeleteDialogOpen(false);
@@ -520,7 +620,12 @@ const Admin = () => {
       });
     },
     onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message?: unknown }).message ?? 'Erro inesperado')
+          : 'Erro inesperado';
       toast({ title: 'Não foi possível excluir inscrições', description: message, variant: 'destructive' });
     },
   });
@@ -612,7 +717,46 @@ const Admin = () => {
       const { error } = await supabase.rpc('admin_delete_course_with_registrations', {
         p_course_id: courseId,
       });
-      if (error) throw error;
+      if (!error) return;
+
+      // Fallback para ambientes onde a RPC ainda não foi aplicada.
+      const { data: linkedRows, error: linkedRowsError } = await supabase
+        .from('registration_courses')
+        .select('registration_id')
+        .eq('course_id', courseId);
+      if (linkedRowsError) throw linkedRowsError;
+
+      const registrationIds = Array.from(new Set((linkedRows ?? []).map((row) => row.registration_id)));
+
+      const { error: deleteLinksError } = await supabase
+        .from('registration_courses')
+        .delete()
+        .eq('course_id', courseId);
+      if (deleteLinksError) throw deleteLinksError;
+
+      if (registrationIds.length > 0) {
+        const { data: remainingLinks, error: remainingLinksError } = await supabase
+          .from('registration_courses')
+          .select('registration_id')
+          .in('registration_id', registrationIds);
+        if (remainingLinksError) throw remainingLinksError;
+
+        const remainingIds = new Set((remainingLinks ?? []).map((row) => row.registration_id));
+        const orphanRegistrationIds = registrationIds.filter((id) => !remainingIds.has(id));
+        if (orphanRegistrationIds.length > 0) {
+          const { error: deleteOrphanError } = await supabase
+            .from('registrations')
+            .delete()
+            .in('id', orphanRegistrationIds);
+          if (deleteOrphanError) throw deleteOrphanError;
+        }
+      }
+
+      const { error: deleteCourseError } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', courseId);
+      if (deleteCourseError) throw deleteCourseError;
     },
     onSuccess: () => {
       setDeleteCourseTarget(null);
@@ -624,7 +768,12 @@ const Admin = () => {
       });
     },
     onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message?: unknown }).message ?? 'Erro inesperado')
+          : 'Erro inesperado';
       toast({ title: 'Não foi possível excluir', description: message, variant: 'destructive' });
     },
   });
@@ -855,7 +1004,11 @@ const Admin = () => {
 
     setExporting('full');
     try {
-      const blob = buildFullWorkbookBlob(rows);
+      const customFieldColumns = (registrationFieldDefsQuery.data ?? []).map((field) => ({
+        key: field.field_key,
+        label: field.label,
+      }));
+      const blob = buildFullWorkbookBlob(rows, customFieldColumns);
       const date = new Date().toISOString().slice(0, 10);
       const filename =
         fullExportScope === 'all'
@@ -1000,6 +1153,10 @@ const Admin = () => {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSettingsDialogOpen(true)}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configurações
+              </Button>
               <Button variant="outline" onClick={() => setGlobalActionDialog('pause')}>
                 <Pause className="mr-2 h-4 w-4" />
                 Pausar Todos
@@ -1371,6 +1528,7 @@ const Admin = () => {
         </div>
       </main>
       <Footer />
+      <SiteSettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
 
       <Dialog open={exportFullDialogOpen} onOpenChange={setExportFullDialogOpen}>
         <DialogContent className="sm:max-w-md">

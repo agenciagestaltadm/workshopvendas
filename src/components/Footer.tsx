@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Instagram, Phone, Globe } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -61,56 +61,30 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-slate-900 text-white py-12">
+    <footer className="bg-foreground text-background py-12">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           {/* Main Content */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             {/* Logo & Description */}
             <div className="text-center md:text-left">
-              <h3 className="font-display text-xl font-bold mb-3 text-blue-400">
-                Canaã Gastronomia 2026
+              <h3 className="font-display text-xl font-bold mb-3 text-primary">
+                Evento de Capacitação
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Evento de capacitação em gastronomia.
-                Cursos práticos de trufas, chocolates e bolos com a chef Istefanny Cardoso.
+              <p className="text-background/80 text-sm leading-relaxed">
+                Evento com trilhas de aprendizagem e atividades práticas.
+                Programação atualizada conforme disponibilidade.
               </p>
-            </div>
-
-            {/* Contact */}
-            <div className="text-center">
-              <h4 className="font-semibold mb-3 text-blue-400 text-sm uppercase tracking-wider">Contato</h4>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li className="flex items-center justify-center gap-2">
-                  <Phone className="w-4 h-4 text-blue-400" />
-                  <span>Em breve</span>
-                </li>
-                <li className="flex items-center justify-center gap-2">
-                  <Globe className="w-4 h-4 text-blue-400" />
-                  <a 
-                    href="https://www.canaa.pa.gov.br" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition-colors"
-                  >
-                    Prefeitura de Canaã
-                  </a>
-                </li>
-                <li className="flex items-center justify-center gap-2">
-                  <Instagram className="w-4 h-4 text-blue-400" />
-                  <span>@canaagastronomia</span>
-                </li>
-              </ul>
             </div>
 
             {/* Quick Links */}
             <div className="text-center md:text-right">
-              <h4 className="font-semibold mb-3 text-blue-400 text-sm uppercase tracking-wider">Links Rápidos</h4>
-              <ul className="space-y-2 text-slate-400 text-sm">
+              <h4 className="font-semibold mb-3 text-primary text-sm uppercase tracking-wider">Links Rápidos</h4>
+              <ul className="space-y-2 text-background/80 text-sm">
                 <li>
                   <button 
                     onClick={() => navigate('/registro')}
-                    className="hover:text-white transition-colors"
+                    className="hover:text-background transition-colors"
                   >
                     Fazer Inscrição
                   </button>
@@ -118,7 +92,7 @@ const Footer = () => {
                 <li>
                   <button 
                     onClick={() => navigate('/#cursos')}
-                    className="hover:text-white transition-colors"
+                    className="hover:text-background transition-colors"
                   >
                     Ver Cursos
                   </button>
@@ -126,7 +100,7 @@ const Footer = () => {
                 <li>
                   <button 
                     onClick={() => setAdminOpen(true)}
-                    className="hover:text-white transition-colors"
+                    className="hover:text-background transition-colors"
                   >
                     Área Administrativa
                   </button>
@@ -136,13 +110,13 @@ const Footer = () => {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-slate-800 pt-6">
+          <div className="border-t border-background/20 pt-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-              <p className="text-slate-500 text-sm text-center md:text-left">
-                © {currentYear} Canaã Gastronomia. Todos os direitos reservados.
+              <p className="text-background/70 text-sm text-center md:text-left">
+                © {currentYear} Evento de Capacitação. Todos os direitos reservados.
               </p>
-              <p className="text-slate-500 text-sm flex items-center gap-1">
-                Realização com <Heart className="w-3.5 h-3.5 text-blue-400 fill-blue-400" /> em Canaã
+              <p className="text-background/70 text-sm flex items-center gap-1">
+                Produzido com <Heart className="w-3.5 h-3.5 text-primary fill-primary" /> para a comunidade
               </p>
             </div>
           </div>

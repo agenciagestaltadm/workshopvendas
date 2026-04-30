@@ -7,6 +7,7 @@ export type FullExportRow = {
   phone: string;
   document: string;
   course: string;
+  customFields?: Record<string, string>;
 };
 
 export type DisparoExportRow = {
@@ -79,9 +80,22 @@ export const buildDisparoContactsCsvBlob = (rows: DisparoExportRow[]) => {
   return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 };
 
-export const buildFullWorkbookArrayBuffer = (rows: FullExportRow[]) => {
-  const header = ['Data', 'Nome', 'Email', 'Telefone', 'CPF/CNPJ', 'Curso'];
-  const data = rows.map((row) => [formatDateDDMMYYYY(row.createdAt), row.name, row.email, row.phone, row.document, row.course]);
+export const buildFullWorkbookArrayBuffer = (
+  rows: FullExportRow[],
+  customFieldColumns: Array<{ key: string; label: string }> = [],
+) => {
+  const baseHeader = ['Data', 'Nome', 'Email', 'Telefone', 'CPF/CNPJ', 'Curso'];
+  const customHeader = customFieldColumns.map((column) => column.label);
+  const header = [...baseHeader, ...customHeader];
+  const data = rows.map((row) => [
+    formatDateDDMMYYYY(row.createdAt),
+    row.name,
+    row.email,
+    row.phone,
+    row.document,
+    row.course,
+    ...customFieldColumns.map((column) => row.customFields?.[column.key] ?? ''),
+  ]);
   const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
 
   const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1:A1');
@@ -110,8 +124,11 @@ export const buildFullWorkbookArrayBuffer = (rows: FullExportRow[]) => {
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true }) as ArrayBuffer;
 };
 
-export const buildFullWorkbookBlob = (rows: FullExportRow[]) => {
-  const buffer = buildFullWorkbookArrayBuffer(rows);
+export const buildFullWorkbookBlob = (
+  rows: FullExportRow[],
+  customFieldColumns: Array<{ key: string; label: string }> = [],
+) => {
+  const buffer = buildFullWorkbookArrayBuffer(rows, customFieldColumns);
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 

@@ -89,8 +89,8 @@ export function NavBar({
           className={cn(
             "flex w-full items-center justify-between gap-2 backdrop-blur-xl py-2 px-3 rounded-2xl transition-all duration-300",
             isScrolled
-              ? "bg-white/95 border border-slate-200/80 shadow-sm"
-              : "bg-white/80 border border-slate-200/50"
+              ? "bg-background/95 border border-border shadow-sm"
+              : "bg-background/80 border border-border"
           )}
         >
           {leadingImageSrc ? (
@@ -106,7 +106,7 @@ export function NavBar({
             </span>
           ) : (
             LeadingIcon && (
-              <span className="flex items-center justify-center px-3 text-slate-800">
+              <span className="flex items-center justify-center px-3 text-foreground">
                 <LeadingIcon size={20} strokeWidth={2.2} aria-label={leadingLabel} />
               </span>
             )
@@ -122,7 +122,7 @@ export function NavBar({
                     <button
                       key={item.name}
                       onClick={(event) => handleItemClick(event, item)}
-                      className="px-6 py-2 bg-blue-500 text-white text-sm font-semibold rounded-full hover:bg-blue-600 transition-colors shadow-sm"
+                      className="px-6 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-full hover:bg-primary/90 transition-colors shadow-sm"
                       type="button"
                     >
                       {item.name}
@@ -137,15 +137,15 @@ export function NavBar({
                     onClick={(event) => handleItemClick(event, item)}
                     className={cn(
                       "relative cursor-pointer text-sm font-medium px-4 py-2 rounded-full transition-colors",
-                      "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-                      isActive && "text-blue-600 bg-blue-50"
+                      "text-muted-foreground hover:text-foreground hover:bg-secondary",
+                      isActive && "text-primary bg-secondary"
                     )}
                   >
                     <span>{item.name}</span>
                     {isActive && (
                       <motion.div
                         layoutId="nav-indicator"
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-blue-500 rounded-full"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full"
                         initial={false}
                         transition={{
                           type: "spring",
@@ -164,7 +164,7 @@ export function NavBar({
             <button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary"
               aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-nav"
@@ -178,7 +178,7 @@ export function NavBar({
           <div
             id="mobile-nav"
             className={cn(
-              "mt-2 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-xl shadow-sm transition-all duration-300",
+              "mt-2 overflow-hidden rounded-2xl border border-border bg-background/95 backdrop-blur-xl shadow-sm transition-all duration-300",
               isMenuOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0 pointer-events-none",
             )}
           >
@@ -192,7 +192,7 @@ export function NavBar({
                     <button
                       key={item.name}
                       onClick={(event) => handleItemClick(event, item)}
-                      className="w-full px-5 py-3 bg-blue-500 text-white font-semibold rounded-xl transition-colors hover:bg-blue-600"
+                      className="w-full px-5 py-3 bg-primary text-primary-foreground font-semibold rounded-xl transition-colors hover:bg-primary/90"
                       type="button"
                     >
                       {item.name}
@@ -207,8 +207,8 @@ export function NavBar({
                     onClick={(event) => handleItemClick(event, item)}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors",
-                      "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                      isActive && "text-blue-600 bg-blue-50"
+                      "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                      isActive && "text-primary bg-secondary"
                     )}
                   >
                     <Icon size={18} strokeWidth={2} />

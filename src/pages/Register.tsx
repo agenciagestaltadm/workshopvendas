@@ -14,6 +14,7 @@ import { toast } from '@/components/ui/use-toast';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { applyPhoneMask } from '@/lib/phone';
 import { applyDocumentMask, isValidDocument } from '@/lib/cpf-cnpj';
+import { getSiteAssetUrl, useRegistrationFormFields, useSiteSettings } from '@/lib/site-settings';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Informe seu nome completo'),
@@ -66,6 +67,9 @@ const mapRegistrationError = (message: string) => {
 
 const Register = () => {
   const navigate = useNavigate();
+  const settingsQuery = useSiteSettings();
+  const dynamicFieldsQuery = useRegistrationFormFields();
+  const [customValues, setCustomValues] = useState<Record<string, string | boolean>>({});
   
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -163,15 +167,26 @@ const Register = () => {
             p_phone: values.phone.trim(),
             p_document: values.document.replace(/\D/g, ''),
             p_course_ids: values.courseIds,
+            p_custom_answers: customValues,
           };
 
           console.log('[Register] Enviando para Supabase:', payload);
 
-          const { data, error } = await supabase.rpc('register_participant_with_courses', payload);
+          const { data, error } = await supabase.rpc('register_participant_with_courses_v2', payload);
           
           if (error) {
-            console.error('[Register] Erro do Supabase:', error);
-            throw new Error(error.message || 'Erro ao salvar no banco de dados');
+            const fallback = await supabase.rpc('register_participant_with_courses', {
+              p_name: payload.p_name,
+              p_email: payload.p_email,
+              p_phone: payload.p_phone,
+              p_document: payload.p_document,
+              p_course_ids: payload.p_course_ids,
+            });
+            if (fallback.error) {
+              console.error('[Register] Erro do Supabase:', fallback.error);
+              throw new Error(fallback.error.message || 'Erro ao salvar no banco de dados');
+            }
+            return String(fallback.data);
           }
           
           if (data) {
@@ -225,24 +240,44 @@ const Register = () => {
     },
   });
 
-  const onSubmit = (values: FormValues) => registerMutation.mutate(values);
+  const dynamicFields = dynamicFieldsQuery.data ?? [];
+
+  const validateDynamicFields = () => {
+    for (const field of dynamicFields) {
+      const value = customValues[field.field_key];
+      if (field.is_required && (value === undefined || value === '' || value === false)) {
+        toast({
+          title: 'Campo obrigatório',
+          description: `Preencha o campo "${field.label}" antes de continuar.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = (values: FormValues) => {
+    if (!validateDynamicFields()) return;
+    registerMutation.mutate(values);
+  };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-5xl">
-          <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
+          <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
             <span className="flex items-center justify-center px-2">
               <img
-                src="/LogoCanaãGastronomia.png"
-                alt="Canaã Gastronomia 2026"
+                src={getSiteAssetUrl(settingsQuery.data?.logo_nav_path) ?? '/LogoCanaãGastronomia.png'}
+                alt="Logo do evento"
                 width={140}
                 height={40}
                 decoding="async"
                 className="h-[36px] w-auto object-contain sm:h-[40px]"
               />
             </span>
-            <Button type="button" variant="outline" onClick={handleBack} className="rounded-full px-6 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800">
+            <Button type="button" variant="outline" onClick={handleBack} className="rounded-full px-6 border-border text-foreground hover:bg-secondary">
               Voltar
             </Button>
           </div>
@@ -251,27 +286,27 @@ const Register = () => {
       <main className="container mx-auto px-4 pb-16 pt-28 sm:pt-32">
         <div className="mx-auto max-w-2xl">
           <header className="text-center">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-sm font-medium mb-4">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary border border-border text-primary text-sm font-medium mb-4">
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
               Inscrições Abertas
             </span>
-            <h1 className="font-display text-3xl font-bold text-slate-800 sm:text-4xl">Inscrição</h1>
-            <p className="mt-3 text-slate-500">
-              Preencha seus dados e escolha os cursos do <strong className="text-blue-500">Canaã Gastronomia 2026</strong>.
+            <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl">Inscrição</h1>
+            <p className="mt-3 text-muted-foreground">
+              Preencha seus dados e escolha os cursos do <strong className="text-primary">evento</strong>.
             </p>
           </header>
 
           {!isSupabaseConfigured ? (
-            <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-              <p className="text-sm text-slate-500">
+            <div className="mt-10 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+              <p className="text-sm text-muted-foreground">
                 O sistema de inscrições ainda não está configurado. Defina <strong>VITE_SUPABASE_URL</strong> e{' '}
                 <strong>VITE_SUPABASE_ANON_KEY</strong>.
               </p>
             </div>
           ) : (
-            <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                   <FormField
                     control={form.control}
                     name="name"
@@ -285,6 +320,52 @@ const Register = () => {
                       </FormItem>
                     )}
                   />
+
+                  {dynamicFields.map((field) => (
+                    <div key={field.id} className="space-y-2">
+                      <FormLabel>
+                        {field.label}
+                        {field.is_required ? ' *' : ''}
+                      </FormLabel>
+                      {field.field_type === 'textarea' ? (
+                        <textarea
+                          className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          placeholder={field.placeholder ?? ''}
+                          value={String(customValues[field.field_key] ?? '')}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.field_key]: e.target.value }))}
+                        />
+                      ) : field.field_type === 'select' ? (
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={String(customValues[field.field_key] ?? '')}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.field_key]: e.target.value }))}
+                        >
+                          <option value="">Selecione</option>
+                          {(field.options_json ?? []).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.field_type === 'checkbox' ? (
+                        <label className="flex items-center gap-2 text-sm text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(customValues[field.field_key])}
+                            onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.field_key]: e.target.checked }))}
+                          />
+                          Marcar
+                        </label>
+                      ) : (
+                        <Input
+                          type={field.field_type === 'number' || field.field_type === 'date' ? field.field_type : 'text'}
+                          placeholder={field.placeholder ?? ''}
+                          value={String(customValues[field.field_key] ?? '')}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, [field.field_key]: e.target.value }))}
+                        />
+                      )}
+                    </div>
+                  ))}
 
                   <FormField
                     control={form.control}
@@ -407,7 +488,7 @@ const Register = () => {
 
                   <Button
                     type="submit"
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3.5 rounded-xl transition-colors duration-200"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3.5 rounded-xl transition-colors duration-200"
                     disabled={registerMutation.isPending || availabilityQuery.isLoading || availabilityQuery.isError || (availabilityQuery.data?.length === 0) || hasAnySoldOut || selectedCourseIds.length === 0}
                   >
                     {registerMutation.isPending 
@@ -426,7 +507,7 @@ const Register = () => {
                 </form>
               </Form>
 
-              <p className="mt-6 text-center text-xs text-slate-400">
+              <p className="mt-6 text-center text-xs text-muted-foreground">
                 As vagas são verificadas no momento do envio. Se algum curso lotar, sua inscrição não será salva.
               </p>
             </div>
