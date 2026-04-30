@@ -578,19 +578,7 @@ const Admin = () => {
   const deleteCourseMutation = useMutation({
     mutationFn: async (courseId: string) => {
       const supabase = requireSupabase();
-      
-      // Primeiro verificar se há inscrições neste curso
-      const { count, error: countError } = await supabase
-        .from('registration_courses')
-        .select('*', { count: 'exact', head: true })
-        .eq('course_id', courseId);
-      
-      if (countError) throw countError;
-      
-      if (count && count > 0) {
-        throw new Error(`Não é possível excluir: existem ${count} inscrição(ões) neste curso.`);
-      }
-      
+
       const { error } = await supabase
         .from('courses')
         .delete()
@@ -601,7 +589,10 @@ const Admin = () => {
       setDeleteCourseTarget(null);
       queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
       queryClient.invalidateQueries({ queryKey: ['course_availability'] });
-      toast({ title: 'Curso excluído', description: 'O curso foi removido com sucesso.' });
+      toast({
+        title: 'Curso excluído',
+        description: 'O curso foi removido com sucesso. Inscrições vinculadas também foram excluídas.',
+      });
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Erro inesperado';
@@ -1895,8 +1886,8 @@ const Admin = () => {
               Esta ação é permanente. O curso será removido e não poderá ser recuperado.
               {deleteCourseTarget && deleteCourseTarget.filled > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  Atenção: Este curso possui {deleteCourseTarget.filled} inscrição(ões). 
-                  Você precisa remover todas as inscrições antes de excluir o curso.
+                  Atenção: Este curso possui {deleteCourseTarget.filled} inscrição(ões).
+                  Ao continuar, as inscrições vinculadas a este curso também serão apagadas.
                 </span>
               )}
             </AlertDialogDescription>
@@ -1915,7 +1906,7 @@ const Admin = () => {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteCourseTarget && deleteCourseMutation.mutate(deleteCourseTarget.course_id)}
-              disabled={!deleteCourseTarget || deleteCourseMutation.isPending || (deleteCourseTarget?.filled ?? 0) > 0}
+              disabled={!deleteCourseTarget || deleteCourseMutation.isPending}
             >
               {deleteCourseMutation.isPending ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
