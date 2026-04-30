@@ -173,6 +173,9 @@ const Admin = () => {
   const [disparoExportScope, setDisparoExportScope] = useState<'all' | 'course'>('all');
   const [disparoExportCourseId, setDisparoExportCourseId] = useState('');
   const [disparoExportFormat, setDisparoExportFormat] = useState<'xlsx' | 'csv'>('xlsx');
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteScope, setBulkDeleteScope] = useState<'all' | 'course'>('all');
+  const [bulkDeleteCourseId, setBulkDeleteCourseId] = useState('');
 
   // Estados para edição de curso
   const [editingCourse, setEditingCourse] = useState<CourseAvailability | null>(null);
@@ -494,6 +497,82 @@ const Admin = () => {
     },
   });
 
+  const bulkDeleteRegistrationsMutation = useMutation({
+    mutationFn: async ({ scope, courseId }: { scope: 'all' | 'course'; courseId?: string }) => {
+      const supabase = requireSupabase();
+
+      if (scope === 'all') {
+        const { error: relError } = await supabase
+          .from('registration_courses')
+          .delete()
+          .neq('registration_id', '');
+        if (relError) throw relError;
+
+        const { error: regError } = await supabase
+          .from('registrations')
+          .delete()
+          .neq('id', '');
+        if (regError) throw regError;
+        return;
+      }
+
+      if (!courseId) {
+        throw new Error('Selecione um curso para excluir as inscrições.');
+      }
+
+      const { data: linkedRows, error: linkedRowsError } = await supabase
+        .from('registration_courses')
+        .select('registration_id')
+        .eq('course_id', courseId);
+      if (linkedRowsError) throw linkedRowsError;
+
+      const registrationIds = Array.from(new Set((linkedRows ?? []).map((row) => row.registration_id)));
+      if (registrationIds.length === 0) {
+        return;
+      }
+
+      const { error: deleteByCourseError } = await supabase
+        .from('registration_courses')
+        .delete()
+        .eq('course_id', courseId);
+      if (deleteByCourseError) throw deleteByCourseError;
+
+      const { data: remainingLinks, error: remainingLinksError } = await supabase
+        .from('registration_courses')
+        .select('registration_id')
+        .in('registration_id', registrationIds);
+      if (remainingLinksError) throw remainingLinksError;
+
+      const remainingIds = new Set((remainingLinks ?? []).map((row) => row.registration_id));
+      const orphanRegistrationIds = registrationIds.filter((id) => !remainingIds.has(id));
+
+      if (orphanRegistrationIds.length > 0) {
+        const { error: deleteOrphanError } = await supabase
+          .from('registrations')
+          .delete()
+          .in('id', orphanRegistrationIds);
+        if (deleteOrphanError) throw deleteOrphanError;
+      }
+    },
+    onSuccess: async (_, variables) => {
+      setBulkDeleteDialogOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+      await queryClient.invalidateQueries({ queryKey: ['course_availability'] });
+      toast({
+        title: 'Inscrições removidas',
+        description:
+          variables.scope === 'all'
+            ? 'Todas as inscrições foram excluídas com sucesso.'
+            : 'As inscrições do curso selecionado foram excluídas com sucesso.',
+      });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Não foi possível excluir inscrições', description: message, variant: 'destructive' });
+    },
+  });
+
   // Mutações para CRUD de cursos
   const createCourseMutation = useMutation({
     mutationFn: async (courseData: typeof courseFormData) => {
@@ -767,6 +846,30 @@ const Admin = () => {
     setDisparoExportFormat('xlsx');
     setDisparoExportCourseId(coursesForExportSelect[0]?.course_id ?? '');
     setExportDisparoDialogOpen(true);
+  };
+
+  const openBulkDeleteDialog = () => {
+    setBulkDeleteScope('all');
+    setBulkDeleteCourseId(coursesForExportSelect[0]?.course_id ?? '');
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleConfirmBulkDelete = () => {
+    if (bulkDeleteRegistrationsMutation.isPending) return;
+
+    if (bulkDeleteScope === 'course' && !bulkDeleteCourseId) {
+      toast({
+        title: 'Selecione um curso',
+        description: 'Escolha um curso para excluir inscrições.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    bulkDeleteRegistrationsMutation.mutate({
+      scope: bulkDeleteScope,
+      courseId: bulkDeleteScope === 'course' ? bulkDeleteCourseId : undefined,
+    });
   };
 
   const handleConfirmFullExport = async () => {
@@ -1150,6 +1253,9 @@ const Admin = () => {
                 <Button type="button" variant="outline" onClick={openExportDisparoDialog} disabled={exporting !== null}>
                   {exporting === 'disparo' ? 'Gerando...' : 'Baixar Excel Disparo'}
                 </Button>
+                <Button type="button" variant="destructive" onClick={openBulkDeleteDialog}>
+                  Excluir Inscrições
+                </Button>
               </div>
             </div>
 
@@ -1401,6 +1507,116 @@ const Admin = () => {
               }
             >
               {exporting === 'full' ? 'Gerando...' : 'Baixar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setBulkDeleteDialogOpen(open);
+          if (!open) {
+            setBulkDeleteScope('all');
+            setBulkDeleteCourseId(coursesForExportSelect[0]?.course_id ?? '');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir inscrições</DialogTitle>
+            <DialogDescription>
+              Esta ação é permanente. Escolha se deseja excluir todas as inscrições ou somente as de um curso.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <RadioGroup
+              value={bulkDeleteScope}
+              onValueChange={(v) => {
+                const next = v as 'all' | 'course';
+                setBulkDeleteScope(next);
+                if (next === 'course' && coursesForExportSelect[0]) {
+                  setBulkDeleteCourseId((prev) =>
+                    prev && coursesForExportSelect.some((c) => c.course_id === prev)
+                      ? prev
+                      : coursesForExportSelect[0].course_id
+                  );
+                }
+              }}
+              className="space-y-3"
+            >
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="all" id="bulk-delete-scope-all" className="mt-1" />
+                <div>
+                  <Label htmlFor="bulk-delete-scope-all" className="cursor-pointer font-medium">
+                    Todas as inscrições
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Remove todos os inscritos e todos os vínculos com cursos.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <RadioGroupItem value="course" id="bulk-delete-scope-course" className="mt-1" />
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="bulk-delete-scope-course" className="cursor-pointer font-medium">
+                    Apenas de um curso
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Remove inscrições do curso selecionado e apaga cadastros sem outros cursos vinculados.
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+
+            {bulkDeleteScope === 'course' && (
+              <div className="space-y-2 pl-0.5">
+                <Label htmlFor="bulk-delete-course-select">Curso</Label>
+                {availabilityQuery.isLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando cursos...</p>
+                ) : coursesForExportSelect.length === 0 ? (
+                  <p className="text-sm text-destructive">Nenhum curso cadastrado.</p>
+                ) : (
+                  <Select value={bulkDeleteCourseId} onValueChange={setBulkDeleteCourseId}>
+                    <SelectTrigger id="bulk-delete-course-select">
+                      <SelectValue placeholder="Selecione o curso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coursesForExportSelect.map((c) => (
+                        <SelectItem key={c.course_id} value={c.course_id}>
+                          {c.name} — {formatDateTime(c.starts_at)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              Atenção: esta exclusão não pode ser desfeita.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBulkDeleteDialogOpen(false)}
+              disabled={bulkDeleteRegistrationsMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmBulkDelete}
+              disabled={
+                bulkDeleteRegistrationsMutation.isPending ||
+                (bulkDeleteScope === 'course' &&
+                  (availabilityQuery.isLoading || !bulkDeleteCourseId || coursesForExportSelect.length === 0))
+              }
+            >
+              {bulkDeleteRegistrationsMutation.isPending ? 'Excluindo...' : 'Excluir Inscrições'}
             </Button>
           </DialogFooter>
         </DialogContent>
