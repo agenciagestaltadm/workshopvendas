@@ -74,9 +74,10 @@ const Thanks = () => {
         console.error('[Thanks] Erro RPC:', error.message, error.details, error.hint);
         setQrError(`Erro ao buscar QR Code: ${error.message}`);
       } else if (data && Array.isArray(data) && data.length > 0) {
-        const codes = (data as { course_id: string; qr_code: string }[]).map((item) => ({
-          ...item,
-          course_name: (state.courses ?? []).find((c) => c.id === item.course_id)?.name ?? '',
+        const codes = (data as { result_course_id: string; result_qr_code: string }[]).map((item) => ({
+          course_id: item.result_course_id,
+          qr_code: item.result_qr_code,
+          course_name: (state.courses ?? []).find((c) => c.id === item.result_course_id)?.name ?? '',
         }));
         console.log('[Thanks] QR codes encontrados:', codes);
         setFetchedQrCodes(codes);
@@ -301,9 +302,9 @@ const Thanks = () => {
                         </p>
                         <div
                           ref={(el) => { qrRefs.current[qr.qr_code] = el; }}
-                          className="bg-white p-2 rounded-lg"
+                          className="bg-white p-3 rounded-lg border-2 border-gray-200 shadow-sm"
                         >
-                          <QRCodeSVG value={qr.qr_code} size={160} />
+                          <QRCodeSVG value={qr.qr_code} size={200} level="M" />
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground font-mono break-all text-center max-w-[200px]">
                           {qr.qr_code}

@@ -114,7 +114,7 @@ type RegistrationCourse = {
   course_id: string;
   courses: CourseInfo | null;
   qr_code?: string | null;
-  is_scanned?: boolean;
+  scanned?: boolean;
   scanned_at?: string | null;
 };
 
@@ -334,7 +334,7 @@ const Admin = () => {
           registration_courses(
             course_id,
             qr_code,
-            is_scanned,
+            scanned,
             scanned_at,
             courses(name, starts_at)
           ),
@@ -1542,16 +1542,16 @@ const Admin = () => {
                                   {rc.courses?.starts_at ? formatDateTime(rc.courses.starts_at) : 'Data não definida'}
                                 </p>
                               </div>
-                              {rc.qr_code && (
+                              {rc.qr_code && isQrEnabled && (
                                 <Badge
                                   variant="outline"
                                   className={
-                                    rc.is_scanned
+                                    rc.scanned
                                       ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
                                       : 'border-amber-500 text-amber-600 bg-amber-50'
                                   }
                                 >
-                                  {rc.is_scanned ? 'Escaneado' : 'Pendente'}
+                                  {rc.scanned ? 'Escaneado' : 'Pendente'}
                                 </Badge>
                               )}
                             </div>

@@ -23,8 +23,8 @@ UPDATE public.site_settings SET enable_qr_code = true WHERE id = 'default';
 DROP FUNCTION IF EXISTS public.generate_qr_codes_for_registration(p_registration_id UUID);
 CREATE OR REPLACE FUNCTION public.generate_qr_codes_for_registration(p_registration_id UUID)
 RETURNS TABLE (
-  course_id TEXT,
-  qr_code TEXT
+  result_course_id TEXT,
+  result_qr_code TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -32,46 +32,46 @@ AS $$
 DECLARE
   v_course_id TEXT;
   v_qr_code TEXT;
-  v_result_course_id TEXT;
-  v_result_qr_code TEXT;
-  v_qr_enabled BOOLEAN;
 BEGIN
   -- Verificar se QR Code está ativado nas configurações
-  SELECT COALESCE(enable_qr_code, false)
-  INTO v_qr_enabled
-  FROM public.site_settings
-  WHERE id = 'default';
-
-  -- Se QR Code estiver ativado, gerar novos QR codes para cursos que ainda não têm
-  IF v_qr_enabled THEN
-    FOR v_course_id IN
-      SELECT rc.course_id
-      FROM public.registration_courses rc
-      WHERE rc.registration_id = p_registration_id
-        AND rc.qr_code IS NULL
-    LOOP
-      v_qr_code := 'QR-' || encode(gen_random_bytes(12), 'hex');
-      
-      UPDATE public.registration_courses
-      SET qr_code = v_qr_code
-      WHERE registration_id = p_registration_id
-        AND course_id = v_course_id;
-      
-      v_result_course_id := v_course_id;
-      v_result_qr_code := v_qr_code;
-      RETURN NEXT;
-    END LOOP;
-  END IF;
-  
-  -- Sempre retornar os QR codes existentes (mesmo que a feature esteja desativada agora)
-  FOR v_result_course_id, v_result_qr_code IN
-    SELECT rc.course_id, rc.qr_code
+  IF NOT EXISTS (
+    SELECT 1 FROM public.site_settings 
+    WHERE id = 'default' AND COALESCE(enable_qr_code, false) = true
+  ) THEN
+    -- Retornar QR codes existentes mesmo se desativado
+    RETURN QUERY
+    SELECT rc.course_id::TEXT, rc.qr_code
     FROM public.registration_courses rc
     WHERE rc.registration_id = p_registration_id
-      AND rc.qr_code IS NOT NULL
+      AND rc.qr_code IS NOT NULL;
+    RETURN;
+  END IF;
+
+  -- Gerar novos QR codes para cursos que ainda não têm
+  FOR v_course_id IN
+    SELECT rc.course_id
+    FROM public.registration_courses rc
+    WHERE rc.registration_id = p_registration_id
+      AND rc.qr_code IS NULL
   LOOP
+    v_qr_code := 'QR-' || encode(gen_random_bytes(12), 'hex');
+    
+    UPDATE public.registration_courses
+    SET qr_code = v_qr_code
+    WHERE registration_id = p_registration_id
+      AND course_id = v_course_id;
+    
+    result_course_id := v_course_id;
+    result_qr_code := v_qr_code;
     RETURN NEXT;
   END LOOP;
+  
+  -- Retornar todos os QR codes existentes para esta inscrição
+  RETURN QUERY
+  SELECT rc.course_id::TEXT, rc.qr_code
+  FROM public.registration_courses rc
+  WHERE rc.registration_id = p_registration_id
+    AND rc.qr_code IS NOT NULL;
 END;
 $$;
 
@@ -83,49 +83,62 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_registration_id UUID;
-  v_course_id UUID;
-  v_scanned BOOLEAN;
-  v_course_name TEXT;
-  v_participant_name TEXT;
+  v_rc RECORD;
+  v_registration RECORD;
+  v_course RECORD;
 BEGIN
-  -- Buscar o registro do QR code
-  SELECT rc.registration_id, rc.course_id, COALESCE(rc.scanned, false)
-  INTO v_registration_id, v_course_id, v_scanned
+  -- Buscar o registration_courses pelo QR code
+  SELECT rc.*
+  INTO v_rc
   FROM public.registration_courses rc
-  WHERE rc.qr_code = p_qr_code;
+  WHERE rc.qr_code = p_qr_code
+  LIMIT 1;
 
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('valid', false, 'error', 'QR Code não encontrado');
-  END IF;
-
-  IF v_scanned THEN
-    -- Buscar dados mesmo para código já escaneado
-    SELECT c.name INTO v_course_name FROM public.courses c WHERE c.id = v_course_id;
-    SELECT r.name INTO v_participant_name FROM public.registrations r WHERE r.id = v_registration_id;
+  IF v_rc IS NULL THEN
     RETURN jsonb_build_object(
       'valid', false,
-      'error', 'QR Code já foi utilizado',
-      'course_name', COALESCE(v_course_name, ''),
-      'participant_name', COALESCE(v_participant_name, ''),
-      'scanned_at', (SELECT scanned_at FROM public.registration_courses WHERE qr_code = p_qr_code)
+      'reason', 'NOT_FOUND',
+      'message', 'QR Code não encontrado. Verifique se o código está correto.'
     );
   END IF;
+
+  IF v_rc.scanned = true THEN
+    RETURN jsonb_build_object(
+      'valid', false,
+      'reason', 'ALREADY_SCANNED',
+      'message', 'Este QR Code já foi utilizado em ' || COALESCE(v_rc.scanned_at::TEXT, 'data desconhecida') || '.',
+      'scanned_at', v_rc.scanned_at
+    );
+  END IF;
+
+  -- Buscar dados da inscrição e curso
+  SELECT r.id, r.name, r.email, r.phone, r.document
+  INTO v_registration
+  FROM public.registrations r
+  WHERE r.id = v_rc.registration_id;
+
+  SELECT c.name, c.starts_at, c.time_label
+  INTO v_course
+  FROM public.courses c
+  WHERE c.id = v_rc.course_id;
 
   -- Marcar como escaneado
   UPDATE public.registration_courses
   SET scanned = true, scanned_at = NOW()
-  WHERE qr_code = p_qr_code;
-
-  -- Buscar dados para retorno
-  SELECT c.name INTO v_course_name FROM public.courses c WHERE c.id = v_course_id;
-  SELECT r.name INTO v_participant_name FROM public.registrations r WHERE r.id = v_registration_id;
+  WHERE id = v_rc.id;
 
   RETURN jsonb_build_object(
     'valid', true,
-    'course_name', COALESCE(v_course_name, ''),
-    'participant_name', COALESCE(v_participant_name, ''),
-    'scanned_at', NOW()
+    'message', 'Acesso liberado!',
+    'registration_id', v_registration.id,
+    'course_id', v_rc.course_id,
+    'name', v_registration.name,
+    'email', v_registration.email,
+    'phone', v_registration.phone,
+    'document', v_registration.document,
+    'course_name', v_course.name,
+    'course_starts_at', v_course.starts_at,
+    'course_time_label', v_course.time_label
   );
 END;
 $$;

@@ -51,9 +51,14 @@ const QRCodeScanner = () => {
       scannerRef.current = scanner;
 
       const config = {
-        fps: 10,
-        qrbox: { width: 220, height: 220 },
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
+        disableFlip: false,
+        formatsToSupport: [0], // QR_CODE only
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true,
+        },
       };
 
       // Tentar câmera traseira primeiro, depois qualquer câmera
@@ -137,6 +142,8 @@ const QRCodeScanner = () => {
     const trimmed = code.trim();
     if (!trimmed) return;
 
+    console.log('[QRScanner] Validando código:', trimmed);
+
     setIsValidating(true);
     setResult(null);
     setError(null);
@@ -147,7 +154,10 @@ const QRCodeScanner = () => {
         p_qr_code: trimmed,
       });
 
+      console.log('[QRScanner] Resultado da validação:', { data, error });
+
       if (error) {
+        console.error('[QRScanner] Erro RPC:', error);
         setResult({
           valid: false,
           message: error.message || 'Erro ao validar QR Code.',
@@ -156,7 +166,8 @@ const QRCodeScanner = () => {
       }
 
       setResult(data as ScanResult);
-    } catch {
+    } catch (err) {
+      console.error('[QRScanner] Erro de conexão:', err);
       setResult({
         valid: false,
         message: 'Erro de conexão. Tente novamente.',
