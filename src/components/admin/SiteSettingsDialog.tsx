@@ -85,6 +85,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         theme_accent: current.theme_accent,
         theme_background: current.theme_background,
         theme_foreground: current.theme_foreground,
+        enable_qr_code: current.enable_qr_code,
       };
       const { error } = await supabase.rpc('update_site_settings', { p_payload: payload });
       if (error) throw error;
@@ -343,6 +344,18 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                   <Label>Texto de horas por curso</Label>
                   <Input value={current.hours_label ?? ''} onChange={(e) => setDraft({ ...current, hours_label: e.target.value })} />
                 </div>
+                <div className="flex items-center gap-3 rounded-md border p-3">
+                  <Switch
+                    checked={current.enable_qr_code ?? false}
+                    onCheckedChange={(checked) => setDraft({ ...current, enable_qr_code: checked })}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Ativar controle de acesso por QR Code</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quando ativo, gera QR Code por curso na inscrição e libera scanner no painel admin.
+                    </p>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="seo" className="space-y-4">
@@ -382,13 +395,13 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                       <div className="mt-1 flex items-center gap-2">
                         <Input
                           type="color"
-                          value={(current as Record<string, string | null>)[key] ?? '#000000'}
-                          onChange={(e) => setDraft({ ...current, [key]: e.target.value } as SiteSettings)}
+                          value={(current as Record<string, string | boolean | null>)[key] as string ?? '#000000'}
+                          onChange={(e) => setDraft({ ...current, [key]: e.target.value } as unknown as SiteSettings)}
                           className="h-10 w-14 p-1"
                         />
                         <Input
-                          value={(current as Record<string, string | null>)[key] ?? ''}
-                          onChange={(e) => setDraft({ ...current, [key]: e.target.value } as SiteSettings)}
+                          value={(current as Record<string, string | boolean | null>)[key] as string ?? ''}
+                          onChange={(e) => setDraft({ ...current, [key]: e.target.value } as unknown as SiteSettings)}
                         />
                       </div>
                     </div>

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Calendar } from 'lucide-react';
+import { CheckCircle2, Calendar, Download, QrCode } from 'lucide-react';
+import QRCodeSVG from 'react-qr-code';
 
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,17 @@ type CourseInfo = {
   startsAt: string;
 };
 
+type QrCodeInfo = {
+  course_id: string;
+  qr_code: string;
+  course_name: string;
+};
+
 type ThanksState = {
   registrationId?: string;
   name?: string;
   courses?: CourseInfo[];
+  qrCodes?: QrCodeInfo[];
 };
 
 const formatDateTime = (value: string) => {
@@ -31,6 +39,7 @@ const Thanks = () => {
   const location = useLocation();
   const state = (location.state ?? {}) as ThanksState;
   const [isReady, setIsReady] = useState(false);
+  const qrRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsReady(true));
@@ -39,6 +48,37 @@ const Thanks = () => {
 
   const courses = state.courses ?? [];
   const hasCourses = courses.length > 0;
+  const qrCodes = state.qrCodes ?? [];
+  const hasQrCodes = qrCodes.length > 0;
+
+  const downloadQrCode = (qrCode: string, courseName: string) => {
+    const svgElement = qrRefs.current[qrCode];
+    if (!svgElement) return;
+
+    const svg = svgElement.querySelector('svg');
+    if (!svg) return;
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngFile;
+      downloadLink.download = `qr-code-${courseName.replace(/\s+/g, '-').toLowerCase()}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -153,6 +193,55 @@ const Thanks = () => {
                   Protocolo: <span className="font-semibold text-foreground">{state.registrationId}</span>
                 </p>
               )}
+            </div>
+          )}
+
+          {hasQrCodes && (
+            <div
+              className={[
+                'mt-10 rounded-2xl border border-border bg-card p-6 text-left shadow-sm',
+                'transition-all delay-300 duration-700 ease-out motion-reduce:transition-none',
+                isReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
+              ].join(' ')}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <QrCode className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Seu controle de acesso</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Apresente o QR Code correspondente à entrada de cada curso. Cada código é único e de uso único.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {qrCodes.map((qr, index) => (
+                  <div
+                    key={qr.course_id}
+                    className="rounded-xl border border-border bg-secondary p-4 flex flex-col items-center"
+                  >
+                    <p className="text-sm font-medium text-foreground mb-2 text-center">
+                      {qr.course_name}
+                    </p>
+                    <div
+                      ref={(el) => { qrRefs.current[qr.qr_code] = el; }}
+                      className="bg-white p-2 rounded-lg"
+                    >
+                      <QRCodeSVG value={qr.qr_code} size={160} />
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground font-mono break-all text-center max-w-[180px]">
+                      {qr.qr_code}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => downloadQrCode(qr.qr_code, qr.course_name)}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Baixar QR Code
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ChefHat } from 'lucide-react';
-import { SiteSettings, defaultSiteSettings, getSiteAssetUrl } from '@/lib/site-settings';
+import { ArrowDown, ChefHat, Award } from 'lucide-react';
+import { SiteSettings, defaultSiteSettings, getSiteAssetUrl, useSiteSettings } from '@/lib/site-settings';
 
 type Props = {
   settings?: SiteSettings;
@@ -8,6 +8,8 @@ type Props = {
 
 const HeroSection = ({ settings = defaultSiteSettings }: Props) => {
   const navigate = useNavigate();
+  const settingsQuery = useSiteSettings();
+  const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
 
   const scrollToCursos = () => {
     document.getElementById('cursos')?.scrollIntoView({ behavior: 'smooth' });
@@ -63,6 +65,15 @@ const HeroSection = ({ settings = defaultSiteSettings }: Props) => {
               {settings.headline ?? defaultSiteSettings.headline}
               <ArrowDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
             </button>
+            {isQrEnabled && (
+              <button 
+                onClick={() => navigate('/certificado')}
+                className="px-8 py-3.5 bg-background border border-border rounded-full text-foreground font-semibold text-base hover:bg-secondary transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
+              >
+                <Award className="w-4 h-4" />
+                Baixar Certificado
+              </button>
+            )}
             <button 
               onClick={scrollToCursos}
               className="px-8 py-3.5 bg-background border border-border rounded-full text-foreground font-semibold text-base hover:bg-secondary transition-all duration-200 shadow-sm"

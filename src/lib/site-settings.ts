@@ -20,6 +20,7 @@ export type SiteSettings = {
   theme_accent: string | null;
   theme_background: string | null;
   theme_foreground: string | null;
+  enable_qr_code: boolean | null;
   updated_at: string;
 };
 
@@ -54,6 +55,7 @@ export const defaultSiteSettings: SiteSettings = {
   theme_accent: '#2563eb',
   theme_background: '#ffffff',
   theme_foreground: '#334155',
+  enable_qr_code: false,
   updated_at: '',
 };
 

@@ -70,6 +70,7 @@ const Register = () => {
   const settingsQuery = useSiteSettings();
   const dynamicFieldsQuery = useRegistrationFormFields();
   const [customValues, setCustomValues] = useState<Record<string, string | boolean>>({});
+  const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
   
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -212,7 +213,7 @@ const Register = () => {
       }
       return localId;
     },
-    onSuccess: (registrationId, values) => {
+    onSuccess: async (registrationId, values) => {
       const courses = values.courseIds.map(id => {
         const course = availabilityById.get(id);
         return {
@@ -221,12 +222,34 @@ const Register = () => {
           startsAt: course?.starts_at ?? '',
         };
       });
+
+      let qrCodes: { course_id: string; qr_code: string; course_name: string }[] | undefined;
+
+      if (isSupabaseConfigured) {
+        try {
+          const supabase = requireSupabase();
+          const { data, error } = await supabase.rpc('generate_qr_codes_for_registration', {
+            p_registration_id: registrationId,
+          });
+          if (error) {
+            console.error('[Register] Erro ao gerar QR codes:', error);
+          } else if (data) {
+            qrCodes = (data as { course_id: string; qr_code: string }[]).map((item) => ({
+              ...item,
+              course_name: courses.find((c) => c.id === item.course_id)?.name ?? '',
+            }));
+          }
+        } catch (e) {
+          console.error('[Register] Erro ao gerar QR codes:', e);
+        }
+      }
       
       navigate('/obrigado', {
         state: {
           registrationId,
           name: values.name.trim(),
           courses,
+          qrCodes,
         },
       });
     },

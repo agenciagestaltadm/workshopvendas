@@ -20,7 +20,8 @@ import {
   Plus,
   Calendar,
   Clock,
-  Settings
+  Settings,
+  ScanLine
 } from 'lucide-react';
 
 import Footer from '@/components/Footer';
@@ -80,7 +81,9 @@ import {
 } from '@/lib/exports';
 import { normalizePhoneForDisparo, normalizePhoneForWhatsApp } from '@/lib/phone';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
+import { useSiteSettings } from '@/lib/site-settings';
 import { SiteSettingsDialog } from '@/components/admin/SiteSettingsDialog';
+import QRCodeScanner from '@/components/admin/QRCodeScanner';
 
 const ADMIN_EMAIL = 'admgestalt@gmail.com';
 
@@ -89,6 +92,7 @@ type CourseAvailability = {
   name: string;
   category: string;
   starts_at: string;
+  ends_at?: string | null;
   capacity: number;
   is_active: boolean;
   filled: number;
@@ -98,6 +102,7 @@ type CourseAvailability = {
   facilitator?: string;
   time_label?: string;
   image_path?: string | null;
+  hours_label?: string | null;
 };
 
 type CourseInfo = {
@@ -108,6 +113,9 @@ type CourseInfo = {
 type RegistrationCourse = {
   course_id: string;
   courses: CourseInfo | null;
+  qr_code?: string | null;
+  is_scanned?: boolean;
+  scanned_at?: string | null;
 };
 
 type RegistrationRow = {
@@ -189,6 +197,8 @@ const Admin = () => {
   const COURSES_BUCKET = 'courses-images';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const settingsQuery = useSiteSettings();
+  const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
   const [isAllowed, setIsAllowed] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<RegistrationRow | null>(null);
@@ -218,6 +228,7 @@ const Admin = () => {
     name: '',
     category: 'Curso',
     starts_at: '',
+    ends_at: '',
     capacity: '20',
     is_active: true,
     description: '',
@@ -225,6 +236,7 @@ const Admin = () => {
     facilitator: '',
     time_label: '',
     image_path: '',
+    hours_label: '',
   });
   const [courseImageFile, setCourseImageFile] = useState<File | null>(null);
   const [courseImagePreviewUrl, setCourseImagePreviewUrl] = useState('');
@@ -321,6 +333,9 @@ const Admin = () => {
           document,
           registration_courses(
             course_id,
+            qr_code,
+            is_scanned,
+            scanned_at,
             courses(name, starts_at)
           ),
           registration_field_answers(
@@ -641,6 +656,7 @@ const Admin = () => {
           name: courseData.name,
           category: courseData.category,
           starts_at: new Date(courseData.starts_at).toISOString(),
+          ends_at: courseData.ends_at ? new Date(courseData.ends_at).toISOString() : null,
           capacity: parseInt(courseData.capacity, 10),
           is_active: courseData.is_active,
           description: courseData.description.trim(),
@@ -648,6 +664,7 @@ const Admin = () => {
           facilitator: courseData.facilitator.trim(),
           time_label: courseData.time_label.trim(),
           image_path: courseData.image_path.trim() || null,
+          hours_label: courseData.hours_label.trim() || null,
         });
       if (error) throw error;
     },
@@ -675,6 +692,7 @@ const Admin = () => {
           name: courseData.name,
           category: courseData.category,
           starts_at: new Date(courseData.starts_at).toISOString(),
+          ends_at: courseData.ends_at ? new Date(courseData.ends_at).toISOString() : null,
           capacity: parseInt(courseData.capacity, 10),
           is_active: courseData.is_active,
           description: courseData.description.trim(),
@@ -682,6 +700,7 @@ const Admin = () => {
           facilitator: courseData.facilitator.trim(),
           time_label: courseData.time_label.trim(),
           image_path: courseData.image_path.trim() || null,
+          hours_label: courseData.hours_label.trim() || null,
         })
         .eq('id', courseData.originalId)
         .select();
@@ -784,6 +803,7 @@ const Admin = () => {
       name: '',
       category: 'Curso',
       starts_at: '',
+      ends_at: '',
       capacity: '20',
       is_active: true,
       description: '',
@@ -791,6 +811,7 @@ const Admin = () => {
       facilitator: '',
       time_label: '',
       image_path: '',
+      hours_label: '',
     });
   };
   const totalCourseFormSteps = 4;
@@ -837,6 +858,7 @@ const Admin = () => {
       name: course.name,
       category: course.category,
       starts_at: course.starts_at.slice(0, 16), // Format for datetime-local input
+      ends_at: course.ends_at ? course.ends_at.slice(0, 16) : '',
       capacity: course.capacity.toString(),
       is_active: course.is_active,
       description: course.description ?? '',
@@ -844,6 +866,7 @@ const Admin = () => {
       facilitator: course.facilitator ?? '',
       time_label: course.time_label ?? '',
       image_path: course.image_path ?? '',
+      hours_label: course.hours_label ?? '',
     });
     setCourseImageFile(null);
     setCourseImagePreviewUrl(getCoursePublicImageUrl(course.image_path));
@@ -1349,6 +1372,19 @@ const Admin = () => {
             </div>
           </section>
 
+          {/* Seção de Scanner QR */}
+          {isQrEnabled && (
+            <section className="mt-10">
+              <div className="flex items-center gap-2 mb-4">
+                <ScanLine className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Controle de Acesso</h2>
+              </div>
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+                <QRCodeScanner />
+              </div>
+            </section>
+          )}
+
           {/* Seção de Inscrições */}
           <section className="mt-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1506,6 +1542,18 @@ const Admin = () => {
                                   {rc.courses?.starts_at ? formatDateTime(rc.courses.starts_at) : 'Data não definida'}
                                 </p>
                               </div>
+                              {rc.qr_code && (
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    rc.is_scanned
+                                      ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
+                                      : 'border-amber-500 text-amber-600 bg-amber-50'
+                                  }
+                                >
+                                  {rc.is_scanned ? 'Escaneado' : 'Pendente'}
+                                </Badge>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -2074,6 +2122,32 @@ const Admin = () => {
                 onChange={(e) => setCourseFormData({ ...courseFormData, starts_at: e.target.value })}
                 className="mt-1"
               />
+            </div>
+            <div>
+              <Label htmlFor="course-end-date">Data e Hora de Término</Label>
+              <Input
+                id="course-end-date"
+                type="datetime-local"
+                value={courseFormData.ends_at}
+                onChange={(e) => setCourseFormData({ ...courseFormData, ends_at: e.target.value })}
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Usado para liberar o certificado após o término do curso.
+              </p>
+            </div>
+                <div>
+              <Label htmlFor="course-hours-label">Carga Horária</Label>
+              <Input
+                id="course-hours-label"
+                placeholder="ex: 8h, 4h, 16h"
+                value={courseFormData.hours_label}
+                onChange={(e) => setCourseFormData({ ...courseFormData, hours_label: e.target.value })}
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Exibido no certificado. Deixe vazio para usar o padrão "8h".
+              </p>
             </div>
                 <div>
               <Label htmlFor="course-location">Local</Label>
