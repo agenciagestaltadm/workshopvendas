@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArrowLeft, Download, FileCheck, Clock, XCircle, Award } from 'lucide-react';
+import { Search, ArrowLeft, Download, FileCheck, Clock, XCircle, Award, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import Footer from '@/components/Footer';
@@ -239,7 +239,9 @@ const Certificate = () => {
                       const releaseDate = course.course_ends_at
                         ? new Date(course.course_ends_at)
                         : new Date(course.course_starts_at);
-                      const isAvailable = releaseDate <= now;
+                      const isTimeReleased = releaseDate <= now;
+                      const isScanned = course.is_scanned === true;
+                      const isAvailable = isTimeReleased && isScanned;
 
                       return (
                         <div
@@ -264,13 +266,8 @@ const Certificate = () => {
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              {!isAvailable ? (
-                                <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">
-                                  <Clock className="mr-1 h-3 w-3" />
-                                  Disponível em {releaseDate.toLocaleDateString('pt-BR')}
-                                </Badge>
-                              ) : (
+                            <div className="flex flex-col items-end gap-2">
+                              {isAvailable ? (
                                 <Button
                                   size="sm"
                                   onClick={() => downloadMutation.mutate(course)}
@@ -285,6 +282,21 @@ const Certificate = () => {
                                     </>
                                   )}
                                 </Button>
+                              ) : (
+                                <div className="flex flex-col items-end gap-1.5">
+                                  {!isScanned && (
+                                    <Badge variant="outline" className="border-red-400 text-red-600 bg-red-50">
+                                      <ShieldAlert className="mr-1 h-3 w-3" />
+                                      Aguardando escaneamento do QR Code
+                                    </Badge>
+                                  )}
+                                  {!isTimeReleased && (
+                                    <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">
+                                      <Clock className="mr-1 h-3 w-3" />
+                                      Disponível em {releaseDate.toLocaleDateString('pt-BR')}
+                                    </Badge>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
