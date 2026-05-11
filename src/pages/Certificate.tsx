@@ -56,10 +56,25 @@ const Certificate = () => {
         p_document: searchedDocument,
       });
       if (error) {
-        console.error('[Certificate] Erro ao buscar certificados:', error);
+        console.error('[Certificate] Erro ao buscar certificados:', JSON.stringify(error, null, 2));
         throw new Error(error.message || 'Erro ao consultar o banco de dados');
       }
-      return (data ?? []) as CertificateCourse[];
+      // Mapear colunas result_* para os nomes esperados no frontend
+      const mapped = (data ?? []).map((item: Record<string, unknown>) => ({
+        registration_id: item.result_registration_id as string,
+        name: item.result_participant_name as string,
+        email: '',
+        course_id: item.result_course_id as string,
+        course_name: item.result_course_name as string,
+        course_starts_at: item.result_course_starts_at as string,
+        course_ends_at: item.result_course_ends_at as string | null,
+        course_time_label: null as string | null,
+        course_hours_label: item.result_hours_label as string,
+        is_scanned: item.result_scanned as boolean,
+        scanned_at: '',
+        qr_code: item.result_qr_code as string,
+      }));
+      return mapped as CertificateCourse[];
     },
   });
 
@@ -74,6 +89,9 @@ const Certificate = () => {
         courseHoursLabel: course.course_hours_label,
         logoUrl: getSiteAssetUrl(settingsQuery.data?.logo_main_path) ?? undefined,
         qrCode: course.qr_code,
+        themePrimary: settingsQuery.data?.theme_primary ?? undefined,
+        themeAccent: settingsQuery.data?.theme_accent ?? undefined,
+        signatureUrl: getSiteAssetUrl(settingsQuery.data?.signature_path) ?? undefined,
       });
 
       const url = URL.createObjectURL(pdfBlob);

@@ -154,41 +154,47 @@ $$;
 DROP FUNCTION IF EXISTS public.get_certificates_by_document(p_document TEXT);
 CREATE OR REPLACE FUNCTION public.get_certificates_by_document(p_document TEXT)
 RETURNS TABLE (
-  registration_id UUID,
-  name TEXT,
-  email TEXT,
-  course_id TEXT,
-  course_name TEXT,
-  course_starts_at TIMESTAMPTZ,
-  course_time_label TEXT,
-  course_hours_label TEXT,
-  is_scanned BOOLEAN,
-  scanned_at TIMESTAMPTZ,
-  qr_code TEXT
+  result_registration_id TEXT,
+  result_participant_name TEXT,
+  result_course_id TEXT,
+  result_course_name TEXT,
+  result_course_starts_at TIMESTAMPTZ,
+  result_course_ends_at TIMESTAMPTZ,
+  result_hours_label TEXT,
+  result_qr_code TEXT,
+  result_scanned BOOLEAN,
+  result_certificate_enabled BOOLEAN
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  v_cert_enabled BOOLEAN;
 BEGIN
+  SELECT COALESCE(enable_qr_code, false) INTO v_cert_enabled
+  FROM public.site_settings WHERE id = 'default';
+
+  IF NOT v_cert_enabled THEN
+    RETURN;
+  END IF;
+
   RETURN QUERY
   SELECT
-    r.id AS registration_id,
-    r.name,
-    r.email,
-    rc.course_id,
+    r.id::TEXT AS registration_id,
+    r.name AS participant_name,
+    c.id::TEXT AS course_id,
     c.name AS course_name,
     c.starts_at AS course_starts_at,
-    c.time_label AS course_time_label,
-    COALESCE(c.hours_label, '8h') AS course_hours_label,
-    rc.is_scanned,
-    rc.scanned_at,
-    rc.qr_code
+    c.ends_at AS course_ends_at,
+    COALESCE(c.hours_label, (SELECT ss.hours_label FROM public.site_settings ss WHERE ss.id = 'default'), '8h') AS hours_label,
+    rc.qr_code AS qr_code,
+    COALESCE(rc.scanned, false) AS scanned,
+    v_cert_enabled AS certificate_enabled
   FROM public.registrations r
-  JOIN public.registration_courses rc ON r.id = rc.registration_id
-  JOIN public.courses c ON rc.course_id = c.id
+  JOIN public.registration_courses rc ON rc.registration_id = r.id
+  JOIN public.courses c ON c.id = rc.course_id
   WHERE r.document = p_document
-    AND rc.is_scanned = true
-  ORDER BY c.starts_at ASC;
+  ORDER BY c.starts_at;
 END;
 $$;
 

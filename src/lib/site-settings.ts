@@ -21,6 +21,7 @@ export type SiteSettings = {
   theme_background: string | null;
   theme_foreground: string | null;
   enable_qr_code: boolean | null;
+  signature_path: string | null;
   updated_at: string;
 };
 
@@ -56,6 +57,7 @@ export const defaultSiteSettings: SiteSettings = {
   theme_background: '#ffffff',
   theme_foreground: '#334155',
   enable_qr_code: false,
+  signature_path: null,
   updated_at: '',
 };
 

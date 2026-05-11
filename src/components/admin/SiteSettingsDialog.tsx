@@ -47,7 +47,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
   const fieldsQuery = useRegistrationFormFields();
   const [draft, setDraft] = useState<SiteSettings | null>(null);
   const [fieldDraft, setFieldDraft] = useState<EditableField>(emptyField);
-  const [uploadingAsset, setUploadingAsset] = useState<null | 'favicon' | 'logoMain' | 'logoNav'>(null);
+  const [uploadingAsset, setUploadingAsset] = useState<null | 'favicon' | 'logoMain' | 'logoNav' | 'signature'>(null);
 
   const current = draft ?? settingsQuery.data ?? null;
 
@@ -86,6 +86,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         theme_background: current.theme_background,
         theme_foreground: current.theme_foreground,
         enable_qr_code: current.enable_qr_code,
+        signature_path: current.signature_path,
       };
       const { error } = await supabase.rpc('update_site_settings', { p_payload: payload });
       if (error) throw error;
@@ -148,7 +149,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
     },
   });
 
-  const uploadAsset = async (asset: 'favicon' | 'logoMain' | 'logoNav', file: File) => {
+  const uploadAsset = async (asset: 'favicon' | 'logoMain' | 'logoNav' | 'signature', file: File) => {
     const supabase = requireSupabase();
     if (!current) return;
     setUploadingAsset(asset);
@@ -166,6 +167,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         favicon_path: asset === 'favicon' ? path : current?.favicon_path ?? null,
         logo_main_path: asset === 'logoMain' ? path : current?.logo_main_path ?? null,
         logo_nav_path: asset === 'logoNav' ? path : current?.logo_nav_path ?? null,
+        signature_path: asset === 'signature' ? path : current?.signature_path ?? null,
       };
       setDraft(nextDraft);
 
@@ -173,6 +175,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         favicon_path: nextDraft.favicon_path,
         logo_main_path: nextDraft.logo_main_path,
         logo_nav_path: nextDraft.logo_nav_path,
+        signature_path: nextDraft.signature_path,
       });
       toast({ title: 'Imagem atualizada', description: 'Upload concluído e salvo nas configurações.' });
     } finally {
@@ -233,10 +236,11 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
 
               <TabsContent value="branding" className="space-y-5">
                 <div className="grid gap-4 md:grid-cols-3">
-                  {[
+                  {[ 
                     { key: 'favicon', label: 'Favicon', value: current.favicon_path },
                     { key: 'logoMain', label: 'Logo principal (Hero)', value: current.logo_main_path },
                     { key: 'logoNav', label: 'Logo da navbar', value: current.logo_nav_path },
+                    { key: 'signature', label: 'Assinatura do certificado', value: current.signature_path },
                   ].map((asset) => (
                     <div key={asset.key} className="rounded-xl border p-4">
                       <Label>{asset.label}</Label>
@@ -256,7 +260,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                             return;
                           }
                           try {
-                            await uploadAsset(asset.key as 'favicon' | 'logoMain' | 'logoNav', file);
+                            await uploadAsset(asset.key as 'favicon' | 'logoMain' | 'logoNav' | 'signature', file);
                           } catch (err) {
                             const message = err instanceof Error ? err.message : 'Erro inesperado';
                             toast({ title: 'Erro no upload', description: message, variant: 'destructive' });
@@ -287,6 +291,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                             favicon_path: asset.key === 'favicon' ? null : current.favicon_path,
                             logo_main_path: asset.key === 'logoMain' ? null : current.logo_main_path,
                             logo_nav_path: asset.key === 'logoNav' ? null : current.logo_nav_path,
+                            signature_path: asset.key === 'signature' ? null : current.signature_path,
                           };
                           setDraft(nextDraft);
                           try {
@@ -294,6 +299,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                               favicon_path: nextDraft.favicon_path,
                               logo_main_path: nextDraft.logo_main_path,
                               logo_nav_path: nextDraft.logo_nav_path,
+                              signature_path: nextDraft.signature_path,
                             });
                             toast({ title: 'Imagem removida', description: 'Alteração salva em tempo real.' });
                           } catch (err) {

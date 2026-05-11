@@ -147,16 +147,16 @@ $$;
 DROP FUNCTION IF EXISTS public.get_certificates_by_document(p_document TEXT);
 CREATE OR REPLACE FUNCTION public.get_certificates_by_document(p_document TEXT)
 RETURNS TABLE (
-  registration_id UUID,
-  participant_name TEXT,
-  course_id UUID,
-  course_name TEXT,
-  course_starts_at TIMESTAMPTZ,
-  course_ends_at TIMESTAMPTZ,
-  hours_label TEXT,
-  qr_code TEXT,
-  scanned BOOLEAN,
-  certificate_enabled BOOLEAN
+  result_registration_id TEXT,
+  result_participant_name TEXT,
+  result_course_id TEXT,
+  result_course_name TEXT,
+  result_course_starts_at TIMESTAMPTZ,
+  result_course_ends_at TIMESTAMPTZ,
+  result_hours_label TEXT,
+  result_qr_code TEXT,
+  result_scanned BOOLEAN,
+  result_certificate_enabled BOOLEAN
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -173,14 +173,14 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    r.id AS registration_id,
+    r.id::TEXT AS registration_id,
     r.name AS participant_name,
-    c.id AS course_id,
+    c.id::TEXT AS course_id,
     c.name AS course_name,
     c.starts_at AS course_starts_at,
     c.ends_at AS course_ends_at,
-    COALESCE(c.hours_label, (SELECT hours_label FROM public.site_settings WHERE id = 'default'), '8h') AS hours_label,
-    rc.qr_code,
+    COALESCE(c.hours_label, (SELECT ss.hours_label FROM public.site_settings ss WHERE ss.id = 'default'), '8h') AS hours_label,
+    rc.qr_code AS qr_code,
     COALESCE(rc.scanned, false) AS scanned,
     v_cert_enabled AS certificate_enabled
   FROM public.registrations r
