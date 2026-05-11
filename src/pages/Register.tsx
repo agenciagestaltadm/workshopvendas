@@ -228,19 +228,24 @@ const Register = () => {
       if (isSupabaseConfigured) {
         try {
           const supabase = requireSupabase();
+          console.log('[Register] Gerando QR codes para registrationId:', registrationId, 'isQrEnabled:', isQrEnabled);
           const { data, error } = await supabase.rpc('generate_qr_codes_for_registration', {
             p_registration_id: registrationId,
           });
+          console.log('[Register] QR RPC resultado:', { data, error });
           if (error) {
-            console.error('[Register] Erro ao gerar QR codes:', error);
-          } else if (data) {
+            console.error('[Register] Erro ao gerar QR codes:', error.message, error.details, error.hint);
+          } else if (data && Array.isArray(data) && data.length > 0) {
             qrCodes = (data as { course_id: string; qr_code: string }[]).map((item) => ({
               ...item,
               course_name: courses.find((c) => c.id === item.course_id)?.name ?? '',
             }));
+            console.log('[Register] QR codes gerados:', qrCodes);
+          } else {
+            console.log('[Register] Nenhum QR code gerado. data:', data, 'isQrEnabled:', isQrEnabled);
           }
         } catch (e) {
-          console.error('[Register] Erro ao gerar QR codes:', e);
+          console.error('[Register] Exceção ao gerar QR codes:', e);
         }
       }
       

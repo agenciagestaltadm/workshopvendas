@@ -1379,7 +1379,7 @@ const Admin = () => {
                 <ScanLine className="h-5 w-5 text-primary" />
                 <h2 className="text-lg font-semibold text-foreground">Controle de Acesso</h2>
               </div>
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-3 sm:p-6 shadow-sm">
                 <QRCodeScanner />
               </div>
             </section>

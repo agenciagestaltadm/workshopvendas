@@ -347,7 +347,17 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                 <div className="flex items-center gap-3 rounded-md border p-3">
                   <Switch
                     checked={current.enable_qr_code ?? false}
-                    onCheckedChange={(checked) => setDraft({ ...current, enable_qr_code: checked })}
+                    onCheckedChange={async (checked) => {
+                      setDraft({ ...current, enable_qr_code: checked });
+                      try {
+                        await persistSiteSettingsPartial({ enable_qr_code: checked });
+                        toast({ title: checked ? 'QR Code ativado' : 'QR Code desativado', description: checked ? 'QR Codes serão gerados nas novas inscrições.' : 'QR Codes não serão mais gerados.' });
+                      } catch (err) {
+                        const message = err instanceof Error ? err.message : 'Erro inesperado';
+                        toast({ title: 'Erro ao alterar QR Code', description: message, variant: 'destructive' });
+                        setDraft({ ...current, enable_qr_code: !checked });
+                      }
+                    }}
                   />
                   <div>
                     <p className="text-sm font-medium">Ativar controle de acesso por QR Code</p>

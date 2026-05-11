@@ -116,14 +116,14 @@ const Certificate = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="fixed left-0 right-0 top-0 z-50 px-5 pt-4 sm:px-6 lg:px-8">
+      <header className="fixed left-0 right-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-4 lg:px-8">
         <div className="mx-auto w-full max-w-5xl">
-          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-2xl border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
-            <div className="flex justify-start pl-2">
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 rounded-2xl border border-border bg-background/95 px-2 py-1.5 sm:px-3 sm:py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
+            <div className="flex justify-start pl-1 sm:pl-2">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full px-5 border-border text-foreground hover:bg-secondary"
+                className="rounded-full px-3 py-2 sm:px-5 text-sm border-border text-foreground hover:bg-secondary min-h-[44px]"
                 onClick={() => navigate('/')}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -145,7 +145,7 @@ const Certificate = () => {
         </div>
       </header>
 
-      <main className="container mx-auto flex-1 px-4 pb-10 pt-32 sm:pt-36">
+      <main className="container mx-auto flex-1 px-3 sm:px-4 pb-10 pt-28 sm:pt-36">
         <div className="relative mx-auto max-w-2xl text-center">
           <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-80 max-w-4xl bg-[radial-gradient(circle_at_center,hsl(217,91%,60%,0.08),transparent_62%)]" />
 
@@ -160,15 +160,15 @@ const Certificate = () => {
             Informe seu CPF ou CNPJ para consultar os certificados disponíveis.
           </p>
 
-          <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+          <div className="mt-6 sm:mt-8 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-8">
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input
-                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                placeholder="CPF ou CNPJ"
                 value={documentInput}
                 onChange={(e) => setDocumentInput(applyDocumentMask(e.target.value))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 maxLength={18}
-                className="flex-1"
+                className="flex-1 text-base"
               />
               <Button
                 onClick={handleSearch}
