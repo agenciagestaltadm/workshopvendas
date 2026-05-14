@@ -1,4 +1,4 @@
-import { ExternalLink, CheckCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle, FileStack } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SiteSettings, defaultSiteSettings } from '@/lib/site-settings';
 
@@ -47,14 +47,26 @@ const CTASection = ({ settings = defaultSiteSettings }: Props) => {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <Link
-            to={settings.cta_primary_url || '/registro'}
-            className="group inline-flex items-center gap-2 px-10 py-4 bg-primary text-primary-foreground rounded-full font-semibold text-lg shadow-sm hover:bg-primary/90 hover:shadow-md transition-all duration-200"
-          >
-            {settings.cta_primary_label ?? 'Fazer Inscrição'}
-            <ExternalLink className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </Link>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to={settings.cta_primary_url || '/registro'}
+              className="group inline-flex items-center gap-2 px-10 py-4 bg-primary text-primary-foreground rounded-full font-semibold text-lg shadow-sm hover:bg-primary/90 hover:shadow-md transition-all duration-200"
+            >
+              {settings.cta_primary_label ?? 'Fazer Inscrição'}
+              <ExternalLink className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
+
+            {settings.enable_documents_section && (
+              <Link
+                to="/documentos"
+                className="group inline-flex items-center gap-2 px-8 py-4 bg-background border-2 border-primary text-primary rounded-full font-semibold text-lg shadow-sm hover:bg-primary hover:text-primary-foreground transition-all duration-200"
+              >
+                <FileStack className="w-5 h-5" />
+                {settings.documents_button_label || 'Documentos'}
+              </Link>
+            )}
+          </div>
 
           {/* Notice */}
           <p className="mt-6 text-sm text-muted-foreground">

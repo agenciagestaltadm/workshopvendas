@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ChefHat, Award } from 'lucide-react';
-import { SiteSettings, defaultSiteSettings, getSiteAssetUrl, useSiteSettings } from '@/lib/site-settings';
+import { ArrowDown, ChefHat, Award, FileStack } from 'lucide-react';
+import { SiteSettings, defaultSiteSettings, getSiteAssetUrl, useSiteSettings, useHeroBanners, useIsMobile } from '@/lib/site-settings';
+import HeroBannerCarousel from '@/components/HeroBannerCarousel';
 
 type Props = {
   settings?: SiteSettings;
@@ -9,7 +10,16 @@ type Props = {
 const HeroSection = ({ settings = defaultSiteSettings }: Props) => {
   const navigate = useNavigate();
   const settingsQuery = useSiteSettings();
+  const bannersQuery = useHeroBanners();
+  const isMobile = useIsMobile();
   const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
+  const isBannerEnabled = settingsQuery.data?.enable_hero_banner ?? false;
+
+  const filteredBanners = (bannersQuery.data ?? []).filter((banner) => {
+    if (banner.device_type === 'all') return true;
+    if (isMobile) return banner.device_type === 'mobile';
+    return banner.device_type === 'desktop';
+  });
 
   const scrollToCursos = () => {
     document.getElementById('cursos')?.scrollIntoView({ behavior: 'smooth' });
@@ -43,6 +53,13 @@ const HeroSection = ({ settings = defaultSiteSettings }: Props) => {
 
           {/* Title - apenas logo, sem texto */}
 
+          {/* Hero Banner Carousel */}
+          {isBannerEnabled && filteredBanners.length > 0 && (
+            <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+              <HeroBannerCarousel banners={filteredBanners} />
+            </div>
+          )}
+
           {/* Description */}
           <p className="text-base text-muted-foreground max-w-xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
             {settings.subheadline ?? defaultSiteSettings.subheadline}
@@ -72,6 +89,15 @@ const HeroSection = ({ settings = defaultSiteSettings }: Props) => {
               >
                 <Award className="w-4 h-4" />
                 Baixar Certificado
+              </button>
+            )}
+            {settings.enable_documents_section && (
+              <button 
+                onClick={() => navigate('/documentos')}
+                className="px-8 py-3.5 bg-background border border-border rounded-full text-foreground font-semibold text-base hover:bg-secondary transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
+              >
+                <FileStack className="w-4 h-4" />
+                {settings.documents_button_label || 'Documentos'}
               </button>
             )}
             <button 

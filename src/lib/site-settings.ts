@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
@@ -21,7 +21,12 @@ export type SiteSettings = {
   theme_background: string | null;
   theme_foreground: string | null;
   enable_qr_code: boolean | null;
+  enable_hero_banner: boolean | null;
   signature_path: string | null;
+  enable_documents_section: boolean | null;
+  documents_button_label: string | null;
+  documents_page_title: string | null;
+  documents_page_subtitle: string | null;
   updated_at: string;
 };
 
@@ -57,7 +62,12 @@ export const defaultSiteSettings: SiteSettings = {
   theme_background: '#ffffff',
   theme_foreground: '#334155',
   enable_qr_code: false,
+  enable_hero_banner: false,
   signature_path: null,
+  enable_documents_section: false,
+  documents_button_label: 'Documentos',
+  documents_page_title: 'Documentos para Download',
+  documents_page_subtitle: 'Baixe os documentos disponíveis',
   updated_at: '',
 };
 
@@ -120,6 +130,42 @@ export const useSiteSettings = () =>
       const { data, error } = await supabase.rpc('get_site_settings');
       if (error || !data) return defaultSiteSettings;
       return { ...defaultSiteSettings, ...(data as SiteSettings) };
+    },
+  });
+
+export type HeroBanner = {
+  id: string;
+  path: string;
+  device_type: 'desktop' | 'mobile' | 'all';
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  return isMobile;
+};
+
+export const useHeroBanners = () =>
+  useQuery({
+    queryKey: ['hero_banners'],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      if (!isSupabaseConfigured) return [] as HeroBanner[];
+      const supabase = requireSupabase();
+      const { data, error } = await supabase.rpc('get_hero_banners');
+      if (error) return [] as HeroBanner[];
+      return (data ?? []) as HeroBanner[];
     },
   });
 

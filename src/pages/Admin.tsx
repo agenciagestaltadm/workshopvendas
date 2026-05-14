@@ -84,6 +84,7 @@ import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { useSiteSettings } from '@/lib/site-settings';
 import { SiteSettingsDialog } from '@/components/admin/SiteSettingsDialog';
 import QRCodeScanner from '@/components/admin/QRCodeScanner';
+import DocumentsSection from '@/components/admin/DocumentsSection';
 
 const ADMIN_EMAIL = 'admgestalt@gmail.com';
 
@@ -1384,6 +1385,11 @@ const Admin = () => {
               </div>
             </section>
           )}
+
+          {/* Seção de Documentos */}
+          <section className="mt-10">
+            <DocumentsSection />
+          </section>
 
           {/* Seção de Inscrições */}
           <section className="mt-10">

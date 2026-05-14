@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import Thanks from "./pages/Thanks";
 import Admin from "./pages/Admin";
 import Certificate from "./pages/Certificate";
+import Documents from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 import { useApplySiteTheme, useSiteSettings } from "./lib/site-settings";
 
@@ -28,6 +29,7 @@ const AppRoutes = () => (
       <Route path="/obrigado" element={<Thanks />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/certificado" element={<Certificate />} />
+      <Route path="/documentos" element={<Documents />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

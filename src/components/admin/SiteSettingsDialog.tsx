@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { getSiteAssetUrl, SiteSettings, useRegistrationFormFields, useSiteSettings } from '@/lib/site-settings';
+import { getSiteAssetUrl, SiteSettings, useRegistrationFormFields, useSiteSettings, useHeroBanners, type HeroBanner } from '@/lib/site-settings';
 import { requireSupabase } from '@/lib/supabase';
 
 type Props = {
@@ -45,9 +45,12 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
   const queryClient = useQueryClient();
   const settingsQuery = useSiteSettings();
   const fieldsQuery = useRegistrationFormFields();
+  const bannersQuery = useHeroBanners();
   const [draft, setDraft] = useState<SiteSettings | null>(null);
   const [fieldDraft, setFieldDraft] = useState<EditableField>(emptyField);
   const [uploadingAsset, setUploadingAsset] = useState<null | 'favicon' | 'logoMain' | 'logoNav' | 'signature'>(null);
+  const [uploadingBanners, setUploadingBanners] = useState(false);
+  const [bannerDeviceType, setBannerDeviceType] = useState<'desktop' | 'mobile' | 'all'>('all');
 
   const current = draft ?? settingsQuery.data ?? null;
 
@@ -86,6 +89,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         theme_background: current.theme_background,
         theme_foreground: current.theme_foreground,
         enable_qr_code: current.enable_qr_code,
+        enable_hero_banner: current.enable_hero_banner,
         signature_path: current.signature_path,
       };
       const { error } = await supabase.rpc('update_site_settings', { p_payload: payload });
@@ -148,6 +152,89 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
       toast({ title: 'Erro ao remover campo', description: message, variant: 'destructive' });
     },
   });
+
+  const upsertBannerMutation = useMutation({
+    mutationFn: async (value: { id?: string; path: string; device_type: 'desktop' | 'mobile' | 'all'; sort_order: number; is_active: boolean }) => {
+      const supabase = requireSupabase();
+      const { error } = await supabase.rpc('admin_upsert_hero_banner', {
+        p_id: value.id ?? null,
+        p_path: value.path,
+        p_device_type: value.device_type,
+        p_sort_order: value.sort_order,
+        p_is_active: value.is_active,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['hero_banners'] });
+      toast({ title: 'Banner salvo' });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Erro ao salvar banner', description: message, variant: 'destructive' });
+    },
+  });
+
+  const deleteBannerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = requireSupabase();
+      const { error } = await supabase.rpc('admin_delete_hero_banner', { p_id: id });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['hero_banners'] });
+      toast({ title: 'Banner removido' });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      toast({ title: 'Erro ao remover banner', description: message, variant: 'destructive' });
+    },
+  });
+
+  const uploadBanners = async (files: FileList) => {
+    const supabase = requireSupabase();
+    setUploadingBanners(true);
+    try {
+      const uploads = Array.from(files).map(async (file) => {
+        if (file.size > 5 * 1024 * 1024) {
+          toast({
+            title: 'Arquivo muito grande',
+            description: `${file.name} excede o limite de 5MB.`,
+            variant: 'destructive',
+          });
+          return null;
+        }
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+        const path = `hero-banner/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('site-assets').upload(path, file, {
+          upsert: true,
+          contentType: file.type || 'image/png',
+        });
+        if (error) throw error;
+        return path;
+      });
+
+      const paths = (await Promise.all(uploads)).filter((p): p is string => p !== null);
+      const currentBanners = bannersQuery.data ?? [];
+      const startOrder = currentBanners.length;
+
+      const saves = paths.map((path, index) =>
+        upsertBannerMutation.mutateAsync({
+          path,
+          device_type: bannerDeviceType,
+          sort_order: startOrder + index,
+          is_active: true,
+        })
+      );
+      await Promise.all(saves);
+
+      if (paths.length > 0) {
+        toast({ title: 'Banners enviados', description: `${paths.length} banner(s) adicionado(s).` });
+      }
+    } finally {
+      setUploadingBanners(false);
+    }
+  };
 
   const uploadAsset = async (asset: 'favicon' | 'logoMain' | 'logoNav' | 'signature', file: File) => {
     const supabase = requireSupabase();
@@ -229,6 +316,8 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
               <TabsList className="mb-4 w-full justify-start overflow-x-auto">
                 <TabsTrigger value="branding">Branding</TabsTrigger>
                 <TabsTrigger value="content">Home Content</TabsTrigger>
+                <TabsTrigger value="banners">Banners</TabsTrigger>
+                <TabsTrigger value="documents">Documentos</TabsTrigger>
                 <TabsTrigger value="seo">SEO</TabsTrigger>
                 <TabsTrigger value="theme">Theme Tokens</TabsTrigger>
                 <TabsTrigger value="fields">Campos de Inscrição</TabsTrigger>
@@ -371,6 +460,247 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                       Quando ativo, gera QR Code por curso na inscrição e libera scanner no painel admin.
                     </p>
                   </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-md border p-3">
+                  <Switch
+                    checked={current.enable_hero_banner ?? false}
+                    onCheckedChange={async (checked) => {
+                      setDraft({ ...current, enable_hero_banner: checked });
+                      try {
+                        await persistSiteSettingsPartial({ enable_hero_banner: checked });
+                        toast({ title: checked ? 'Banner rotativo ativado' : 'Banner rotativo desativado', description: checked ? 'Os banners serão exibidos na home entre a logo e o texto principal.' : 'O banner rotativo será ocultado da home.' });
+                      } catch (err) {
+                        const message = err instanceof Error ? err.message : 'Erro inesperado';
+                        toast({ title: 'Erro ao alterar banner', description: message, variant: 'destructive' });
+                        setDraft({ ...current, enable_hero_banner: !checked });
+                      }
+                    }}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Ativar banner rotativo na Home</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quando ativo, exibe um carrossel de banners na hero section, entre a logo e o texto principal.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="documents" className="space-y-5">
+                <div className="flex items-center gap-3 rounded-md border p-3">
+                  <Switch
+                    checked={current.enable_documents_section ?? false}
+                    onCheckedChange={async (checked) => {
+                      setDraft({ ...current, enable_documents_section: checked });
+                      try {
+                        await persistSiteSettingsPartial({ enable_documents_section: checked });
+                        toast({ 
+                          title: checked ? 'Seção de documentos ativada' : 'Seção de documentos desativada', 
+                          description: checked 
+                            ? 'A seção de documentos agora está visível no site.' 
+                            : 'A seção de documentos foi ocultada do site.' 
+                        });
+                      } catch (err) {
+                        const message = err instanceof Error ? err.message : 'Erro inesperado';
+                        toast({ title: 'Erro ao alterar documentos', description: message, variant: 'destructive' });
+                        setDraft({ ...current, enable_documents_section: !checked });
+                      }
+                    }}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Ativar seção de documentos</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quando ativo, exibe um botão para documentos na página inicial e uma página de downloads.
+                    </p>
+                  </div>
+                </div>
+
+                {current.enable_documents_section && (
+                  <div className="space-y-4 border rounded-lg p-4">
+                    <div>
+                      <Label>Texto do botão de documentos</Label>
+                      <Input
+                        value={current.documents_button_label ?? ''}
+                        onChange={async (e) => {
+                          const value = e.target.value;
+                          setDraft({ ...current, documents_button_label: value });
+                          try {
+                            await persistSiteSettingsPartial({ documents_button_label: value });
+                          } catch (err) {
+                            toast({ title: 'Erro ao salvar', variant: 'destructive' });
+                          }
+                        }}
+                        placeholder="Ex: Documentos, Downloads, Materiais"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Este texto aparecerá no botão que leva à página de documentos.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label>Título da página de documentos</Label>
+                      <Input
+                        value={current.documents_page_title ?? ''}
+                        onChange={async (e) => {
+                          const value = e.target.value;
+                          setDraft({ ...current, documents_page_title: value });
+                          try {
+                            await persistSiteSettingsPartial({ documents_page_title: value });
+                          } catch (err) {
+                            toast({ title: 'Erro ao salvar', variant: 'destructive' });
+                          }
+                        }}
+                        placeholder="Ex: Documentos para Download"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Subtítulo da página de documentos</Label>
+                      <Input
+                        value={current.documents_page_subtitle ?? ''}
+                        onChange={async (e) => {
+                          const value = e.target.value;
+                          setDraft({ ...current, documents_page_subtitle: value });
+                          try {
+                            await persistSiteSettingsPartial({ documents_page_subtitle: value });
+                          } catch (err) {
+                            toast({ title: 'Erro ao salvar', variant: 'destructive' });
+                          }
+                        }}
+                        placeholder="Ex: Baixe os documentos disponíveis"
+                      />
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="banners" className="space-y-5">
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground bg-muted/30">
+                  <p className="font-medium text-foreground mb-1">Dimensões recomendadas</p>
+                  <p>Para melhor resultado visual, utilize imagens com as seguintes proporções:</p>
+                  <ul className="mt-2 ml-4 list-disc space-y-1">
+                    <li><strong>Desktop:</strong> 1920 x 500 pixels</li>
+                    <li><strong>Mobile:</strong> 800 x 400 pixels</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <Label>Dispositivo de destino</Label>
+                  <select
+                    className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={bannerDeviceType}
+                    onChange={(e) => setBannerDeviceType(e.target.value as 'desktop' | 'mobile' | 'all')}
+                  >
+                    <option value="all">Ambos (Desktop e Mobile)</option>
+                    <option value="desktop">Apenas Desktop</option>
+                    <option value="mobile">Apenas Mobile</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Selecione para qual dispositivo os banners enviados serao exibidos.
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Upload de banners</Label>
+                  <Input
+                    className="mt-2"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    onChange={async (event) => {
+                      const files = event.target.files;
+                      if (!files || files.length === 0) return;
+                      try {
+                        await uploadBanners(files);
+                      } catch (err) {
+                        const message = err instanceof Error ? err.message : 'Erro inesperado';
+                        toast({ title: 'Erro no upload', description: message, variant: 'destructive' });
+                      }
+                      event.target.value = '';
+                    }}
+                    disabled={uploadingBanners}
+                  />
+                  {uploadingBanners && (
+                    <p className="mt-2 text-xs text-muted-foreground">Enviando banners...</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {(bannersQuery.data ?? []).length === 0 && (
+                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                      Nenhum banner cadastrado. Faça upload das imagens acima para adicionar banners ao carrossel.
+                    </div>
+                  )}
+                  {[...(bannersQuery.data ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((banner) => (
+                    <div key={banner.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <img
+                        src={`${getSiteAssetUrl(banner.path) ?? ''}?v=${banner.created_at ?? Date.now()}`}
+                        alt="Banner"
+                        className="h-16 w-24 rounded-md border object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{banner.path.split('/').pop()}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Label className="text-xs text-muted-foreground">Ordem:</Label>
+                          <Input
+                            type="number"
+                            className="h-7 w-20 text-sm"
+                            value={banner.sort_order}
+                            onChange={(e) => {
+                              const val = Number(e.target.value || 0);
+                              upsertBannerMutation.mutate({
+                                id: banner.id,
+                                path: banner.path,
+                                device_type: banner.device_type,
+                                sort_order: val,
+                                is_active: banner.is_active,
+                              });
+                            }}
+                          />
+                        </div>
+                        <div className="mt-1">
+                          <select
+                            className="h-7 w-full max-w-[180px] rounded-md border border-input bg-background px-2 text-xs"
+                            value={banner.device_type}
+                            onChange={(e) => {
+                              upsertBannerMutation.mutate({
+                                id: banner.id,
+                                path: banner.path,
+                                device_type: e.target.value as 'desktop' | 'mobile' | 'all',
+                                sort_order: banner.sort_order,
+                                is_active: banner.is_active,
+                              });
+                            }}
+                          >
+                            <option value="all">Ambos</option>
+                            <option value="desktop">Desktop</option>
+                            <option value="mobile">Mobile</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={banner.is_active}
+                          onCheckedChange={(checked) => {
+                            upsertBannerMutation.mutate({
+                              id: banner.id,
+                              path: banner.path,
+                              device_type: banner.device_type,
+                              sort_order: banner.sort_order,
+                              is_active: checked,
+                            });
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteBannerMutation.mutate(banner.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </TabsContent>
 
