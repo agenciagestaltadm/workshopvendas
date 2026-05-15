@@ -42,18 +42,19 @@ const HeroBannerCarousel = ({ banners }: Props) => {
         ]}
         className="w-full"
       >
-        <CarouselContent>
+        <CarouselContent className="-ml-0">
           {banners.map((banner) => (
             <CarouselItem key={banner.id}>
-              <div className="relative w-full overflow-hidden rounded-xl border border-border shadow-sm">
-                <div className="w-full max-h-[280px] md:max-h-[380px]">
+              <div className="relative w-full overflow-hidden rounded-[1.75rem] border border-border/70 bg-card shadow-[0_20px_60px_-35px_hsl(var(--foreground)/0.5)]">
+                <div className="w-full max-h-[280px] sm:max-h-[340px] md:max-h-[420px]">
                   <img
                     src={getSiteAssetUrl(banner.path) ?? ''}
                     alt="Banner"
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     loading="lazy"
                   />
                 </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
             </CarouselItem>
           ))}
@@ -65,30 +66,30 @@ const HeroBannerCarousel = ({ banners }: Props) => {
         <>
           <button
             onClick={() => api?.scrollPrev()}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 md:w-10 md:h-10 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-secondary transition-colors shadow-sm"
+            className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/80 bg-background/90 shadow-sm transition-colors hover:bg-secondary md:left-4 md:h-11 md:w-11"
             aria-label="Banner anterior"
           >
-            <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-foreground" />
+            <ChevronLeft className="h-4 w-4 text-foreground md:h-5 md:w-5" />
           </button>
 
           <button
             onClick={() => api?.scrollNext()}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 md:w-10 md:h-10 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-secondary transition-colors shadow-sm"
+            className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/80 bg-background/90 shadow-sm transition-colors hover:bg-secondary md:right-4 md:h-11 md:w-11"
             aria-label="Próximo banner"
           >
-            <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-foreground" />
+            <ChevronRight className="h-4 w-4 text-foreground md:h-5 md:w-5" />
           </button>
 
           {/* Dots indicator */}
-          <div className="flex justify-center gap-2 mt-3">
+          <div className="mt-4 flex justify-center gap-2.5">
             {Array.from({ length: count }).map((_, index) => (
               <button
                 key={index}
                 onClick={() => api?.scrollTo(index)}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   current === index
-                    ? 'bg-primary w-6'
-                    : 'bg-muted-foreground/40 w-2 hover:bg-muted-foreground/70'
+                    ? 'w-7 bg-primary shadow-sm shadow-primary/30'
+                    : 'w-2 bg-muted-foreground/40 hover:bg-muted-foreground/70'
                 }`}
                 aria-label={`Ir para banner ${index + 1}`}
               />

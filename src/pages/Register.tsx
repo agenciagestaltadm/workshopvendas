@@ -45,7 +45,7 @@ type CourseAvailability = {
   capacity: number;
   filled: number;
   remaining: number;
-  is_active?: boolean; // Adicionado para indicar se o curso está ativo
+  is_active?: boolean;
 };
 
 const mapRegistrationError = (message: string) => {
@@ -65,21 +65,16 @@ const mapRegistrationError = (message: string) => {
   return message || 'Erro ao processar inscrição. Tente novamente.';
 };
 
+// Storage key for local registrations backup
+const REGISTRATIONS_STORAGE_KEY = 'workshop_registrations_backup';
+
 const Register = () => {
   const navigate = useNavigate();
   const settingsQuery = useSiteSettings();
   const dynamicFieldsQuery = useRegistrationFormFields();
   const [customValues, setCustomValues] = useState<Record<string, string | boolean>>({});
-  const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
-  
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/');
-  };
 
+  // ALL HOOKS MUST BE CALLED HERE, before any conditional returns
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -94,7 +89,7 @@ const Register = () => {
   const availabilityQuery = useQuery({
     queryKey: ['course_availability', 'vendas-online'],
     enabled: true,
-    refetchInterval: 30000, // Atualiza a cada 30 segundos
+    refetchInterval: 30000,
     retry: 3,
     retryDelay: 2000,
     queryFn: async () => {
@@ -104,13 +99,13 @@ const Register = () => {
       if (error) {
         throw error;
       }
-      
+
       const courses = (data ?? []) as CourseAvailability[];
-      
+
       if (import.meta.env.DEV) {
         console.log('[Register] Cursos carregados do Supabase:', courses.length);
       }
-      
+
       return courses;
     },
   });
@@ -124,15 +119,15 @@ const Register = () => {
   }, [availabilityQuery.data]);
 
   const selectedCourseIds = form.watch('courseIds');
-  
+
   const selectedCourses = useMemo(() => {
     return selectedCourseIds.map(id => availabilityById.get(id)).filter(Boolean) as CourseAvailability[];
   }, [selectedCourseIds, availabilityById]);
-  
+
   const hasAnySoldOut = selectedCourses.some(c => c.remaining <= 0);
 
-  // Storage key for local registrations backup
-  const REGISTRATIONS_STORAGE_KEY = 'workshop_registrations_backup';
+  const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
+  const logoNavSrc = getSiteAssetUrl(settingsQuery.data?.logo_nav_path);
 
   // Save registration locally
   const saveRegistrationLocally = (values: FormValues) => {
@@ -286,9 +281,17 @@ const Register = () => {
     return true;
   };
 
-  const handleSubmit = (values: FormValues) => {
+  const handleSubmitForm = (values: FormValues) => {
     if (!validateDynamicFields()) return;
     registerMutation.mutate(values);
+  };
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/');
   };
 
   return (
@@ -297,14 +300,18 @@ const Register = () => {
         <div className="mx-auto w-full max-w-5xl">
           <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur-xl transition-all duration-300">
             <span className="flex items-center justify-center px-2">
-              <img
-                src={getSiteAssetUrl(settingsQuery.data?.logo_nav_path) ?? '/LogoCanaãGastronomia.png'}
-                alt="Logo do evento"
-                width={140}
-                height={40}
-                decoding="async"
-                className="h-[36px] w-auto object-contain sm:h-[40px]"
-              />
+              {logoNavSrc ? (
+                <img
+                  src={logoNavSrc}
+                  alt="Logo do evento"
+                  width={140}
+                  height={40}
+                  decoding="async"
+                  className="h-[36px] w-auto object-contain sm:h-[40px]"
+                />
+              ) : (
+                <span className="block h-[36px] w-[140px] sm:h-[40px]" aria-hidden="true" />
+              )}
             </span>
             <Button type="button" variant="outline" onClick={handleBack} className="rounded-full px-6 border-border text-foreground hover:bg-secondary">
               Voltar
@@ -335,7 +342,7 @@ const Register = () => {
           ) : (
             <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(handleSubmitForm)} className="space-y-6">
                   <FormField
                     control={form.control}
                     name="name"

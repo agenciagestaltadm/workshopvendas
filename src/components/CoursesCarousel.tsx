@@ -58,7 +58,7 @@ const CoursesCarousel = () => {
         dateLabel,
       };
     });
-  }, [coursesQuery.data, isSupabaseConfigured]);
+  }, [coursesQuery.data]);
 
   useEffect(() => {
     if (!api) return;
@@ -83,26 +83,26 @@ const CoursesCarousel = () => {
   };
 
   return (
-    <section id="cursos" className="py-20 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
+    <section id="cursos" className="bg-background py-12 sm:py-16 lg:py-24">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="max-w-7xl mx-auto">
           {/* Section Header */}
-          <div className="text-center mb-14">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-secondary border border-border text-primary text-sm font-medium mb-4">
+          <div className="mx-auto mb-8 sm:mb-10 lg:mb-14 max-w-3xl text-center">
+            <span className="mb-3 sm:mb-4 inline-flex rounded-full border border-primary/15 bg-secondary/70 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold uppercase tracking-[0.15em] sm:tracking-[0.18em] text-primary shadow-sm">
               Programação
             </span>
-            <h2 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-4">
+            <h2 className="mb-3 sm:mb-4 font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
               Cursos do Evento
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Cursos cadastrados pelo admin com datas, palestrantes e imagens atualizadas.
+            <p className="mx-auto max-w-2xl text-sm sm:text-base leading-6 sm:leading-7 text-muted-foreground md:text-lg md:leading-8">
+              Confira nossa programação completa com datas, palestrantes e locais.
             </p>
           </div>
 
           {/* Carousel */}
           <div className="relative">
             {coursesQuery.isError && (
-              <div className="mb-6 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
+              <div className="mb-8 rounded-3xl border border-destructive/20 bg-destructive/5 p-6 text-center text-base text-destructive">
                 Erro ao carregar cursos. Tente novamente em instantes.
               </div>
             )}
@@ -114,86 +114,90 @@ const CoursesCarousel = () => {
               }}
               plugins={[
                 Autoplay({
-                  delay: 5000,
+                  delay: 6000,
                   stopOnInteraction: true,
                 }),
               ]}
               className="w-full"
             >
-              <CarouselContent className="-ml-6">
+              <CarouselContent className="-ml-3 sm:-ml-4 md:-ml-5">
                 {courses.map((course) => (
-                  <CarouselItem key={course.id} className="pl-6 md:basis-1/2 lg:basis-1/3">
-                    <div className="bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-shadow duration-300 max-w-sm mx-auto">
-                      <div className="w-full bg-muted">
-                        <div className="aspect-[4/5]">
+                  <CarouselItem key={course.id} className="pl-3 sm:pl-4 md:basis-1/2 md:pl-5 lg:basis-1/3">
+                    <div className="group mx-auto flex h-full max-w-xs sm:max-w-sm flex-col overflow-hidden rounded-2xl sm:rounded-[2rem] border border-border/60 bg-card shadow-[0_12px_40px_-25px_hsl(var(--foreground)/0.4)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-25px_hsl(var(--foreground)/0.5)]">
+                      <div className="relative w-full bg-white/40 dark:bg-black/20 flex items-center justify-center p-4 sm:p-6 border-b border-border/30">
                           {course.imageUrl ? (
                             <img
                               src={course.imageUrl}
                               alt={course.name}
-                              className="h-full w-full object-cover"
+                              className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105"
                               loading="lazy"
+                              style={{ display: 'block' }}
+                              onError={(e) => {
+                                console.error('Erro ao carregar imagem do curso:', course.imageUrl);
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                            <div className="flex h-full w-full items-center justify-center text-xs sm:text-sm text-muted-foreground">
                               Imagem não cadastrada
                             </div>
                           )}
-                        </div>
                       </div>
 
                       {/* Course Info */}
-                      <div className="p-4 md:p-5">
-                        <h3 className="font-display text-lg md:text-xl font-bold text-foreground mb-2">
+                      <div className="flex flex-grow flex-col p-3 sm:p-4">
+                        <h3 className="mb-1.5 sm:mb-2 font-display text-base sm:text-lg font-bold leading-snug text-foreground line-clamp-2">
                           {course.name}
                         </h3>
 
                         {course.facilitator && (
-                          <p className="text-sm font-medium text-primary mb-2">
-                            Palestrante: {course.facilitator}
+                          <p className="mb-2 sm:mb-3 flex items-center gap-1.5 text-xs sm:text-sm font-medium text-primary/80">
+                            <span className="h-px w-3 sm:w-4 bg-primary/20 flex-shrink-0" />
+                            <span className="line-clamp-1">{course.facilitator}</span>
                           </p>
                         )}
 
                         {course.description && (
-                          <div className="mb-4">
+                          <div className="mb-3 sm:mb-4 flex-grow">
                             <p
-                              className={`text-muted-foreground leading-relaxed text-sm ${
-                                expandedDescriptions[course.id] ? '' : 'line-clamp-3'
+                              className={`text-muted-foreground leading-relaxed text-xs sm:text-sm ${
+                                expandedDescriptions[course.id] ? '' : 'line-clamp-2'
                               }`}
                             >
                               {course.description}
                             </p>
-                            {course.description.length > 140 && (
+                            {course.description.length > 100 && (
                               <button
                                 type="button"
                                 onClick={() => toggleDescription(course.id)}
-                                className="mt-2 text-xs font-semibold text-primary hover:text-primary/80"
+                                className="mt-1.5 sm:mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                               >
-                                {expandedDescriptions[course.id] ? 'Ver menos' : 'Ver mais'}
+                                {expandedDescriptions[course.id] ? 'Menos' : 'Mais'}
                               </button>
                             )}
                           </div>
                         )}
 
-                        <div className="flex flex-wrap gap-3 mb-6">
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-lg">
-                            <Calendar className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-xs md:text-sm text-foreground font-medium">{course.dateLabel}</span>
+                        <div className="mt-auto mb-4 sm:mb-6 grid gap-1.5">
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
+                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-primary/70" />
+                            <span>{course.dateLabel}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-lg">
-                            <Clock className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-xs md:text-sm text-foreground font-medium">{course.time_label || '-'}</span>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-primary/70" />
+                            <span>{course.time_label || 'Horário a definir'}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-lg">
-                            <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-xs md:text-sm text-muted-foreground font-medium truncate max-w-[200px]">{course.location || '-'}</span>
+                          <div className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+                            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-primary/50 mt-0.5" />
+                            <span className="leading-tight">{course.location || 'Local a definir'}</span>
                           </div>
                         </div>
 
                         <button
                           onClick={handleInscrever}
-                          className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-colors duration-200 text-sm md:text-base"
+                          className="w-full rounded-lg sm:rounded-xl bg-primary py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90"
                         >
-                          Inscrever-se neste curso
+                          Garantir minha vaga
                         </button>
                       </div>
                     </div>
@@ -202,25 +206,25 @@ const CoursesCarousel = () => {
               </CarouselContent>
 
               {/* Navigation */}
-              <div className="flex items-center justify-center gap-4 mt-8">
+              <div className="mt-8 sm:mt-10 flex flex-row items-center justify-center gap-4 sm:gap-6">
                 <button
                   onClick={() => api?.scrollPrev()}
-                  className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center hover:bg-secondary transition-colors shadow-sm"
+                  className="group flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary/20 bg-background shadow-sm transition-all hover:border-primary hover:bg-secondary"
                   aria-label="Curso anterior"
                 >
-                  <ChevronLeft className="w-5 h-5 text-foreground" />
+                  <ChevronLeft className="h-6 w-6 text-primary transition-transform group-hover:-translate-x-0.5" />
                 </button>
 
                 {/* Dots indicator */}
-                <div className="flex gap-2">
+                <div className="flex gap-2.5">
                   {Array.from({ length: count }).map((_, index) => (
                     <button
                       key={index}
                       onClick={() => api?.scrollTo(index)}
-                      className={`h-2 rounded-full transition-all duration-300 ${
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
                         current === index
-                          ? 'bg-primary w-6'
-                          : 'bg-muted-foreground/40 w-2 hover:bg-muted-foreground/70'
+                          ? 'bg-primary w-8 shadow-sm shadow-primary/30'
+                          : 'bg-primary/20 w-2.5 hover:bg-primary/40'
                       }`}
                       aria-label={`Ir para curso ${index + 1}`}
                     />
@@ -229,21 +233,19 @@ const CoursesCarousel = () => {
 
                 <button
                   onClick={() => api?.scrollNext()}
-                  className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center hover:bg-secondary transition-colors shadow-sm"
+                  className="group flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary/20 bg-background shadow-sm transition-all hover:border-primary hover:bg-secondary"
                   aria-label="Próximo curso"
                 >
-                  <ChevronRight className="w-5 h-5 text-foreground" />
+                  <ChevronRight className="h-6 w-6 text-primary transition-transform group-hover:translate-x-0.5" />
                 </button>
               </div>
             </Carousel>
             {!coursesQuery.isLoading && courses.length === 0 && (
-              <div className="mt-6 rounded-xl border border-border bg-muted p-6 text-center text-sm text-muted-foreground">
+              <div className="mt-8 rounded-3xl border border-dashed border-border bg-muted/50 p-12 text-center text-lg text-muted-foreground">
                 Nenhum curso ativo cadastrado no momento.
               </div>
             )}
           </div>
-
-
         </div>
       </div>
     </section>

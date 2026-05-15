@@ -727,27 +727,83 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="theme" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+              <TabsContent value="theme" className="space-y-6">
+                <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+                  <p className="mb-1 font-medium text-foreground">Como as cores funcionam?</p>
+                  <p>
+                    As opções abaixo alteram a aparência visual da home, dos botões, dos textos e das superfícies do sistema.
+                    Cada seletor explica exatamente onde a cor aparece para evitar mudanças por tentativa e erro.
+                  </p>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
                   {[
-                    ['theme_primary', 'Primária'],
-                    ['theme_secondary', 'Secundária'],
-                    ['theme_accent', 'Accent'],
-                    ['theme_background', 'Background'],
-                    ['theme_foreground', 'Foreground'],
-                  ].map(([key, label]) => (
-                    <div key={key}>
-                      <Label>{label}</Label>
-                      <div className="mt-1 flex items-center gap-2">
+                    {
+                      key: 'theme_primary',
+                      label: 'Primária',
+                      description:
+                        'Afeta os elementos de maior destaque da interface, como botões principais, links importantes, ícones em evidência e indicadores ativos.',
+                      examples: 'Exemplos visuais: botões "Inscreva-se", "Garantir minha vaga", ícones destacados e pontos ativos dos carrosséis.',
+                      note: 'Prefira uma cor forte e contrastante, pois ela será a principal chamada visual da página.',
+                    },
+                    {
+                      key: 'theme_secondary',
+                      label: 'Secundária',
+                      description:
+                        'Afeta áreas de apoio da interface, especialmente fundos suaves, badges, blocos informativos e estados de hover mais discretos.',
+                      examples: 'Exemplos visuais: selos de seção, cartões auxiliares, blocos de benefícios e fundos suaves usados para separar conteúdo.',
+                      note: 'Funciona melhor como complemento da cor primária, sem competir com os CTAs principais.',
+                    },
+                    {
+                      key: 'theme_accent',
+                      label: 'Accent',
+                      description:
+                        'Afeta detalhes decorativos e realces sutis usados para dar acabamento visual, profundidade e variação na composição.',
+                      examples: 'Exemplos visuais: brilhos decorativos, transições leves, elementos de apoio e pequenos destaques de composição.',
+                      note: 'Use uma cor que converse com a identidade visual sem prejudicar a leitura do conteúdo.',
+                    },
+                    {
+                      key: 'theme_background',
+                      label: 'Background',
+                      description:
+                        'Afeta o fundo-base do site e das principais superfícies claras, servindo como pano de fundo para quase todo o conteúdo.',
+                      examples: 'Exemplos visuais: fundo geral da home, áreas principais de leitura e superfícies amplas da interface.',
+                      note: 'Recomendado usar tons claros ou suaves para preservar conforto visual e contraste com textos e botões.',
+                    },
+                    {
+                      key: 'theme_foreground',
+                      label: 'Foreground',
+                      description:
+                        'Afeta a cor do texto principal e de conteúdos de leitura prioritária, influenciando diretamente a legibilidade da interface.',
+                      examples: 'Exemplos visuais: títulos, textos principais, rótulos e conteúdos de leitura em cartões e seções.',
+                      note: 'Recomendado usar tons mais escuros ou de alto contraste em relação ao fundo.',
+                    },
+                  ].map(({ key, label, description, examples, note }) => (
+                    <div key={key} className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <Label className="text-base font-semibold">{label}</Label>
+                          <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-secondary-foreground">
+                            Cor da interface
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+                        <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+                          <p className="font-medium text-foreground">Onde você vai perceber essa mudança?</p>
+                          <p className="mt-1">{examples}</p>
+                          <p className="mt-2">{note}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 pt-1">
                         <Input
                           type="color"
                           value={(current as Record<string, string | boolean | null>)[key] as string ?? '#000000'}
                           onChange={(e) => setDraft({ ...current, [key]: e.target.value } as unknown as SiteSettings)}
-                          className="h-10 w-14 p-1"
+                          className="h-12 w-16 cursor-pointer p-1"
                         />
                         <Input
                           value={(current as Record<string, string | boolean | null>)[key] as string ?? ''}
                           onChange={(e) => setDraft({ ...current, [key]: e.target.value } as unknown as SiteSettings)}
+                          className="font-mono text-sm uppercase"
                         />
                       </div>
                     </div>

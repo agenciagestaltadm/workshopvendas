@@ -1,14 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Sparkles } from 'lucide-react';
 import { NavBar } from '@/components/ui/tubelight-navbar';
-import { SiteSettings, defaultSiteSettings, getSiteAssetUrl } from '@/lib/site-settings';
+import { SiteSettings, getSiteAssetUrl } from '@/lib/site-settings';
 
 type Props = {
   settings?: SiteSettings;
 };
 
-const Navbar = ({ settings = defaultSiteSettings }: Props) => {
+const Navbar = ({ settings }: Props) => {
   const navigate = useNavigate();
+  const logoSrc = getSiteAssetUrl(settings?.logo_nav_path) ?? undefined;
 
   const navItems = [
     { name: 'Cursos', url: '#cursos', icon: BookOpen },
@@ -30,7 +31,7 @@ const Navbar = ({ settings = defaultSiteSettings }: Props) => {
     <NavBar
       items={navItems}
       onItemClick={handleItemClick}
-      leadingImageSrc={getSiteAssetUrl(settings.logo_nav_path) ?? '/LogoCanaãGastronomia.png'}
+      leadingImageSrc={logoSrc}
       leadingImageAlt="Logo do evento"
     />
   );

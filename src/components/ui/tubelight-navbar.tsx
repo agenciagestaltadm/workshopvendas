@@ -83,14 +83,14 @@ export function NavBar({
   };
 
   return (
-    <div className={cn("fixed top-0 left-0 right-0 z-50 transition-all duration-300", isScrolled ? "pt-3 px-4 sm:px-6 lg:px-8" : "pt-5 px-5 sm:px-6 lg:px-8", className)}>
-      <div className="mx-auto w-full max-w-5xl">
+    <div className={cn("fixed left-0 right-0 top-0 z-50 transition-all duration-300", isScrolled ? "px-4 pt-3 sm:px-6 lg:px-8" : "px-5 pt-5 sm:px-6 lg:px-8", className)}>
+      <div className="mx-auto w-full max-w-6xl">
         <div
           className={cn(
-            "flex w-full items-center justify-between gap-2 backdrop-blur-xl py-2 px-3 rounded-2xl transition-all duration-300",
+            "flex w-full items-center justify-between gap-3 rounded-[1.6rem] px-3 py-2.5 backdrop-blur-xl transition-all duration-300 sm:px-4",
             isScrolled
-              ? "bg-background/95 border border-border shadow-sm"
-              : "bg-background/80 border border-border"
+              ? "border border-border/80 bg-background/95 shadow-[0_16px_45px_-30px_hsl(var(--foreground)/0.45)]"
+              : "border border-border/70 bg-background/80 shadow-[0_12px_32px_-28px_hsl(var(--foreground)/0.35)]"
           )}
         >
           {leadingImageSrc ? (
@@ -101,7 +101,7 @@ export function NavBar({
                 width={140}
                 height={48}
                 decoding="async"
-                className="h-[40px] w-auto sm:h-[48px] object-contain"
+                className="h-[40px] w-auto object-contain sm:h-[48px]"
               />
             </span>
           ) : (
@@ -113,7 +113,7 @@ export function NavBar({
           )}
 
           {!isMobile && (
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center gap-1.5">
               {items.map((item) => {
                 const isActive = activeTab === item.name;
 
@@ -122,7 +122,7 @@ export function NavBar({
                     <button
                       key={item.name}
                       onClick={(event) => handleItemClick(event, item)}
-                      className="px-6 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-full hover:bg-primary/90 transition-colors shadow-sm"
+                      className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                       type="button"
                     >
                       {item.name}
@@ -136,7 +136,7 @@ export function NavBar({
                     href={item.url}
                     onClick={(event) => handleItemClick(event, item)}
                     className={cn(
-                      "relative cursor-pointer text-sm font-medium px-4 py-2 rounded-full transition-colors",
+                      "relative cursor-pointer rounded-full px-4 py-2.5 text-sm font-medium transition-colors",
                       "text-muted-foreground hover:text-foreground hover:bg-secondary",
                       isActive && "text-primary bg-secondary"
                     )}
@@ -164,7 +164,7 @@ export function NavBar({
             <button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary"
               aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-nav"
@@ -178,11 +178,11 @@ export function NavBar({
           <div
             id="mobile-nav"
             className={cn(
-              "mt-2 overflow-hidden rounded-2xl border border-border bg-background/95 backdrop-blur-xl shadow-sm transition-all duration-300",
+              "mt-2 overflow-hidden rounded-[1.6rem] border border-border/80 bg-background/95 backdrop-blur-xl shadow-[0_16px_45px_-30px_hsl(var(--foreground)/0.45)] transition-all duration-300",
               isMenuOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0 pointer-events-none",
             )}
           >
-            <div className="flex flex-col gap-1 p-2">
+            <div className="flex flex-col gap-1 p-2.5">
               {items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.name;
@@ -192,7 +192,7 @@ export function NavBar({
                     <button
                       key={item.name}
                       onClick={(event) => handleItemClick(event, item)}
-                      className="w-full px-5 py-3 bg-primary text-primary-foreground font-semibold rounded-xl transition-colors hover:bg-primary/90"
+                      className="w-full rounded-xl bg-primary px-5 py-3 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                       type="button"
                     >
                       {item.name}

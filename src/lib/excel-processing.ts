@@ -26,7 +26,7 @@ export const processDisparoFile = async (file: File): Promise<ProcessResult> => 
         const worksheet = workbook.Sheets[firstSheetName];
         
         // Parse to JSON with header row
-        const rawRows = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+        const rawRows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 });
         
         if (!rawRows || rawRows.length < 2) {
             reject(new Error('Arquivo vazio ou sem cabeçalho.'));
@@ -48,7 +48,7 @@ export const processDisparoFile = async (file: File): Promise<ProcessResult> => 
 
         // Skip header
         for (let i = 1; i < rawRows.length; i++) {
-            const row = rawRows[i] as any[];
+            const row = rawRows[i] as unknown[];
             if (!row || row.length === 0) continue;
 
             const name = String(row[nameIdx] || '').trim();

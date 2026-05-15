@@ -61,64 +61,69 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-foreground text-background py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Main Content */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            {/* Logo & Description */}
-            <div className="text-center md:text-left">
-              <h3 className="font-display text-xl font-bold mb-3 text-primary">
+    <footer className="bg-foreground text-background">
+      <div className="container mx-auto px-3 sm:px-4 pb-6 sm:pb-8 pt-12 sm:pt-16 lg:pt-20">
+        <div className="max-w-7xl mx-auto">
+          {/* Main Footer Content */}
+          <div className="mb-10 sm:mb-14 grid grid-cols-1 gap-8 sm:gap-10 md:grid-cols-2 lg:grid-cols-4 lg:gap-12">
+            {/* Brand Section */}
+            <div className="space-y-4 sm:space-y-6 lg:col-span-2">
+              <h3 className="font-display text-xl sm:text-2xl font-bold md:text-3xl">
                 Evento de Capacitação
               </h3>
-              <p className="text-background/80 text-sm leading-relaxed">
-                Evento com trilhas de aprendizagem e atividades práticas.
-                Programação atualizada conforme disponibilidade.
+              <p className="max-w-md text-xs sm:text-sm leading-6 sm:leading-7 text-background/70 md:text-base">
+                Plataforma completa para gestão de inscrições e emissão de certificados.
+                Transformando a experiência de eventos e workshops.
               </p>
             </div>
 
             {/* Quick Links */}
-            <div className="text-center md:text-right">
-              <h4 className="font-semibold mb-3 text-primary text-sm uppercase tracking-wider">Links Rápidos</h4>
-              <ul className="space-y-2 text-background/80 text-sm">
+            <div className="space-y-4 sm:space-y-6">
+              <h4 className="font-semibold text-base sm:text-lg">Links Rápidos</h4>
+              <ul className="space-y-2 sm:space-y-3">
                 <li>
-                  <button 
+                  <button
                     onClick={() => navigate('/registro')}
-                    className="hover:text-background transition-colors"
+                    className="inline-block text-xs sm:text-sm text-background/70 transition-all hover:translate-x-1 hover:text-primary md:text-base"
                   >
                     Fazer Inscrição
                   </button>
                 </li>
                 <li>
-                  <button 
+                  <button
                     onClick={() => navigate('/#cursos')}
-                    className="hover:text-background transition-colors"
+                    className="inline-block text-xs sm:text-sm text-background/70 transition-all hover:translate-x-1 hover:text-primary md:text-base"
                   >
                     Ver Cursos
                   </button>
                 </li>
+              </ul>
+            </div>
+
+            {/* Admin & Auth */}
+            <div className="space-y-4 sm:space-y-6">
+              <h4 className="font-semibold text-base sm:text-lg">Administração</h4>
+              <ul className="space-y-2 sm:space-y-3">
                 <li>
-                  <button 
+                  <button
                     onClick={() => setAdminOpen(true)}
-                    className="hover:text-background transition-colors"
+                    className="inline-block text-xs sm:text-sm text-background/70 transition-all hover:translate-x-1 hover:text-primary md:text-base"
                   >
-                    Área Administrativa
+                    Acesso Restrito
                   </button>
                 </li>
               </ul>
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-background/20 pt-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-              <p className="text-background/70 text-sm text-center md:text-left">
-                © {currentYear} Evento de Capacitação. Todos os direitos reservados.
-              </p>
-              <p className="text-background/70 text-sm flex items-center gap-1">
-                Produzido com <Heart className="w-3.5 h-3.5 text-primary fill-primary" /> para a comunidade
-              </p>
-            </div>
+          {/* Divider & Bottom Bar */}
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-background/10 pt-6 sm:pt-8 md:flex-row">
+            <p className="text-center text-xs sm:text-sm text-background/50 md:text-left">
+              © {currentYear} Evento de Capacitação. Todos os direitos reservados.
+            </p>
+            <p className="flex items-center gap-1.5 rounded-full bg-background/5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-background/50">
+              Feito com <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-pulse fill-primary text-primary" /> para a comunidade
+            </p>
           </div>
         </div>
       </div>

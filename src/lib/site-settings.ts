@@ -45,22 +45,20 @@ export type RegistrationFormField = {
 export const defaultSiteSettings: SiteSettings = {
   id: 'default',
   favicon_path: null,
-  logo_main_path: '/LogoCanaãGastronomia.png',
-  logo_nav_path: '/LogoCanaãGastronomia.png',
-  headline: 'Inscreva-se Agora',
-  subheadline:
-    'Uma experiência única de aprendizado em gastronomia. Cursos práticos de trufas, chocolates e bolos com a chef Istefanny Cardoso.',
-  cta_primary_label: 'Inscreva-se Agora',
+  logo_main_path: null,
+  logo_nav_path: null,
+  headline: '',
+  subheadline: '',
+  cta_primary_label: 'Inscreva-se',
   cta_primary_url: '/registro',
-  hours_label: '8h por curso',
-  seo_title: 'Workshop de Vendas Online | Parauapebas - Cursos Gratuitos',
-  seo_description:
-    'Capacitação gratuita em vendas digitais. Aprenda produtos digitais, páginas de vendas, criativos e tráfego pago.',
-  theme_primary: '#3b82f6',
-  theme_secondary: '#eff6ff',
-  theme_accent: '#2563eb',
-  theme_background: '#ffffff',
-  theme_foreground: '#334155',
+  hours_label: '',
+  seo_title: 'Evento de Capacitação',
+  seo_description: 'Evento com inscrições e programação configuráveis.',
+  theme_primary: null,
+  theme_secondary: null,
+  theme_accent: null,
+  theme_background: null,
+  theme_foreground: null,
   enable_qr_code: false,
   enable_hero_banner: false,
   signature_path: null,
@@ -215,13 +213,52 @@ export const useApplySiteTheme = (settings: SiteSettings | undefined) => {
     }
 
     if (settings.seo_description?.trim()) {
-      let descriptionMeta = document.querySelector("meta[name='description']") as HTMLMetaElement | null;
-      if (!descriptionMeta) {
-        descriptionMeta = document.createElement('meta');
-        descriptionMeta.name = 'description';
-        document.head.appendChild(descriptionMeta);
-      }
-      descriptionMeta.content = settings.seo_description.trim();
+      upsertMetaByName('description', settings.seo_description.trim());
+    }
+
+    const pageUrl = window.location.href;
+    const socialImage =
+      getSiteAssetUrl(settings.logo_main_path) ??
+      getSiteAssetUrl(settings.logo_nav_path) ??
+      getSiteAssetUrl(settings.favicon_path);
+
+    if (settings.seo_title?.trim()) {
+      upsertMetaByProperty('og:title', settings.seo_title.trim());
+      upsertMetaByName('twitter:title', settings.seo_title.trim());
+    }
+
+    if (settings.seo_description?.trim()) {
+      upsertMetaByProperty('og:description', settings.seo_description.trim());
+      upsertMetaByName('twitter:description', settings.seo_description.trim());
+    }
+
+    upsertMetaByProperty('og:type', 'website');
+    upsertMetaByProperty('og:url', pageUrl);
+    upsertMetaByName('twitter:card', 'summary_large_image');
+
+    if (socialImage) {
+      upsertMetaByProperty('og:image', socialImage);
+      upsertMetaByName('twitter:image', socialImage);
     }
   }, [settings]);
+};
+
+const upsertMetaByName = (name: string, content: string) => {
+  let meta = document.querySelector(`meta[name='${name}']`) as HTMLMetaElement | null;
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = name;
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+};
+
+const upsertMetaByProperty = (property: string, content: string) => {
+  let meta = document.querySelector(`meta[property='${property}']`) as HTMLMetaElement | null;
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute('property', property);
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
 };
