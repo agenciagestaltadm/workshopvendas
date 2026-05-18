@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
+import { apiFetch } from '@/lib/api';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { applyPhoneMask } from '@/lib/phone';
 import { applyDocumentMask, isValidDocument } from '@/lib/cpf-cnpj';
@@ -251,7 +252,7 @@ const Register = () => {
       if (settingsQuery.data?.enable_whatsapp_messages) {
         courses.forEach(course => {
           const courseQr = qrCodes?.find(qr => qr.course_id === course.id);
-          fetch('/api/whatsapp/send-registration', {
+          apiFetch('/api/whatsapp/send-registration', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

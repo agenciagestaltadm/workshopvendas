@@ -237,6 +237,10 @@ const server = createServer(async (req, res) => {
           });
           return;
         }
+
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'WhatsApp API route not found', pathname }));
+        return;
       } catch (apiError) {
         console.error(`[API Error] ${pathname}:`, apiError);
         res.writeHead(500, { 'Content-Type': 'application/json' });

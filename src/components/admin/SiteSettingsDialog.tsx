@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
+import { apiFetch } from '@/lib/api';
 import { getSiteAssetUrl, SiteSettings, useRegistrationFormFields, useSiteSettings, useHeroBanners, type HeroBanner } from '@/lib/site-settings';
 import { requireSupabase } from '@/lib/supabase';
 
@@ -61,7 +62,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
     if (open) {
       const checkStatus = async () => {
           try {
-            const res = await fetch('/api/whatsapp/status');
+            const res = await apiFetch('/api/whatsapp/status');
             if (res.ok) {
               const data = await res.json();
               setWhatsappStatus(data);
@@ -84,11 +85,11 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
       setWhatsappLoading(true);
       try {
         if (whatsappStatus.status === 'connected' || whatsappStatus.status === 'qr') {
-          const res = await fetch('/api/whatsapp/stop', { method: 'POST' });
+          const res = await apiFetch('/api/whatsapp/stop', { method: 'POST' });
           if (!res.ok) throw new Error('Erro HTTP: ' + res.status);
           setWhatsappStatus({ status: 'disconnected', qr: null });
         } else {
-          const res = await fetch('/api/whatsapp/start', { method: 'POST' });
+          const res = await apiFetch('/api/whatsapp/start', { method: 'POST' });
           if (!res.ok) throw new Error('Erro HTTP: ' + res.status);
           setWhatsappStatus({ status: 'connecting', qr: null });
         }
