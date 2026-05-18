@@ -35,8 +35,31 @@ const MIME_TYPES = {
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   '';
+
+const normalizeOrigin = (value) => value?.trim().replace(/\/$/, '') || '';
+
+const getEnvOrigins = (...values) =>
+  values
+    .flatMap((value) => String(value || '').split(','))
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+const configuredCorsOrigins = getEnvOrigins(
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
+  process.env.SITE_URL,
+  'https://www.agenciagestalt.com',
+  'https://agenciagestalt.com',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+);
+
+const allowedCorsOrigins = [...new Set(configuredCorsOrigins)];
 
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
@@ -60,6 +83,24 @@ const buildOrigin = (req) => {
   const protocol = typeof forwardedProto === 'string' ? forwardedProto : 'http';
   const host = typeof forwardedHost === 'string' ? forwardedHost : req.headers.host;
   return `${protocol}://${host}`;
+};
+
+const applyCorsHeaders = (req, res) => {
+  const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin.replace(/\/$/, '') : '';
+  const isAllowedRequestOrigin = requestOrigin && allowedCorsOrigins.includes(requestOrigin);
+
+  if (isAllowedRequestOrigin) {
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  } else if (!requestOrigin) {
+    const fallbackOrigin = normalizeOrigin(process.env.SITE_URL) || normalizeOrigin(process.env.FRONTEND_URL);
+    if (fallbackOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', fallbackOrigin);
+    }
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 };
 
 const getAssetUrl = (req, assetPath) => {
@@ -188,9 +229,7 @@ const server = createServer(async (req, res) => {
 
     // API Routes for WhatsApp
     if (pathname.startsWith('/api/whatsapp')) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      applyCorsHeaders(req, res);
 
       if (req.method === 'OPTIONS') {
         res.writeHead(200);
