@@ -3,7 +3,11 @@ import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 import pino from 'pino';
+import { fileURLToPath } from 'url';
 import { generateCertificatePdfNode } from './certificate.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const logger = pino({ level: 'silent' });
 let sock = null;
@@ -22,7 +26,7 @@ export const startWhatsApp = async () => {
   currentQr = null;
 
   try {
-    const authFolder = path.resolve(process.cwd(), 'server', 'auth_info_baileys');
+    const authFolder = path.join(__dirname, 'auth_info_baileys');
     if (!fs.existsSync(authFolder)) {
       fs.mkdirSync(authFolder, { recursive: true });
     }
@@ -49,8 +53,9 @@ export const startWhatsApp = async () => {
         connectionStatus = 'disconnected';
         currentQr = null;
         if (shouldReconnect) {
-          startWhatsApp();
+          setTimeout(() => startWhatsApp(), 5000);
         } else {
+          const authFolder = path.join(__dirname, 'auth_info_baileys');
           if (fs.existsSync(authFolder)) {
             fs.rmSync(authFolder, { recursive: true, force: true });
           }
@@ -76,7 +81,7 @@ export const stopWhatsApp = async () => {
   }
   connectionStatus = 'disconnected';
   currentQr = null;
-  const authFolder = path.resolve(process.cwd(), 'server', 'auth_info_baileys');
+  const authFolder = path.join(__dirname, 'auth_info_baileys');
   if (fs.existsSync(authFolder)) {
     fs.rmSync(authFolder, { recursive: true, force: true });
   }

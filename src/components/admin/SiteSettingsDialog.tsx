@@ -60,16 +60,18 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
     let interval: ReturnType<typeof setInterval>;
     if (open) {
       const checkStatus = async () => {
-        try {
-          const res = await fetch('/api/whatsapp/status');
-          if (res.ok) {
-            const data = await res.json();
-            setWhatsappStatus(data);
+          try {
+            const res = await fetch('/api/whatsapp/status');
+            if (res.ok) {
+              const data = await res.json();
+              setWhatsappStatus(data);
+            } else {
+              console.error('[WhatsApp] Falha ao verificar status:', res.status);
+            }
+          } catch (e) {
+            console.error('[WhatsApp] Exceção ao verificar status:', e);
           }
-        } catch (e) {
-          // Ignore
-        }
-      };
+        };
       checkStatus();
       interval = setInterval(checkStatus, 3000);
     }
@@ -79,21 +81,24 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
   }, [open]);
 
   const toggleWhatsAppConnection = async () => {
-    setWhatsappLoading(true);
-    try {
-      if (whatsappStatus.status === 'connected' || whatsappStatus.status === 'qr') {
-        await fetch('/api/whatsapp/stop', { method: 'POST' });
-        setWhatsappStatus({ status: 'disconnected', qr: null });
-      } else {
-        await fetch('/api/whatsapp/start', { method: 'POST' });
-        setWhatsappStatus({ status: 'connecting', qr: null });
+      setWhatsappLoading(true);
+      try {
+        if (whatsappStatus.status === 'connected' || whatsappStatus.status === 'qr') {
+          const res = await fetch('/api/whatsapp/stop', { method: 'POST' });
+          if (!res.ok) throw new Error('Erro HTTP: ' + res.status);
+          setWhatsappStatus({ status: 'disconnected', qr: null });
+        } else {
+          const res = await fetch('/api/whatsapp/start', { method: 'POST' });
+          if (!res.ok) throw new Error('Erro HTTP: ' + res.status);
+          setWhatsappStatus({ status: 'connecting', qr: null });
+        }
+      } catch (e) {
+        console.error('[WhatsApp] Erro ao alternar conexão:', e);
+        toast({ title: 'Erro', description: 'Falha ao comunicar com o serviço do WhatsApp.', variant: 'destructive' });
+      } finally {
+        setWhatsappLoading(false);
       }
-    } catch (e) {
-      toast({ title: 'Erro', description: 'Falha ao comunicar com o serviço do WhatsApp.', variant: 'destructive' });
-    } finally {
-      setWhatsappLoading(false);
-    }
-  };
+    };
 
   const current = draft ?? settingsQuery.data ?? null;
 

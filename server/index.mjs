@@ -198,42 +198,49 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      if (req.method === 'GET' && pathname === '/api/whatsapp/status') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(getWhatsAppStatus()));
-        return;
-      }
+      try {
+        if (req.method === 'GET' && pathname === '/api/whatsapp/status') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(getWhatsAppStatus()));
+          return;
+        }
 
-      if (req.method === 'POST' && pathname === '/api/whatsapp/start') {
-        startWhatsApp();
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
-        return;
-      }
+        if (req.method === 'POST' && pathname === '/api/whatsapp/start') {
+          startWhatsApp();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
 
-      if (req.method === 'POST' && pathname === '/api/whatsapp/stop') {
-        stopWhatsApp();
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
-        return;
-      }
+        if (req.method === 'POST' && pathname === '/api/whatsapp/stop') {
+          stopWhatsApp();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
 
-      if (req.method === 'POST' && pathname === '/api/whatsapp/send-registration') {
-        let body = '';
-        req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', () => {
-          try {
-            console.log('Recebido request de send-registration:', body);
-            const { phone, name, courseName, qrCode } = JSON.parse(body);
-            sendRegistrationMessage(phone, name, courseName, qrCode);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true }));
-          } catch (e) {
-            console.error('Erro ao fazer parse do request de send-registration:', e);
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Invalid JSON' }));
-          }
-        });
+        if (req.method === 'POST' && pathname === '/api/whatsapp/send-registration') {
+          let body = '';
+          req.on('data', chunk => { body += chunk.toString(); });
+          req.on('end', () => {
+            try {
+              console.log('Recebido request de send-registration:', body);
+              const { phone, name, courseName, qrCode } = JSON.parse(body);
+              sendRegistrationMessage(phone, name, courseName, qrCode);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true }));
+            } catch (e) {
+              console.error('Erro ao fazer parse do request de send-registration:', e);
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+          });
+          return;
+        }
+      } catch (apiError) {
+        console.error(`[API Error] ${pathname}:`, apiError);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal Server Error' }));
         return;
       }
     }
