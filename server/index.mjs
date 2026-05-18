@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import { startWhatsApp, stopWhatsApp, getWhatsAppStatus, sendRegistrationMessage, startCertificateJob } from './whatsapp.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,15 +76,27 @@ const getAssetUrl = (req, assetPath) => {
   return `${supabaseUrl}/storage/v1/object/public/site-assets/${assetPath}`;
 };
 
+let cachedSettings = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 60000; // 1 minute
+
 const fetchSiteSettings = async () => {
   if (!supabase) return null;
 
+  const now = Date.now();
+  if (cachedSettings && (now - lastFetchTime < CACHE_TTL)) {
+    return cachedSettings;
+  }
+
   try {
     const { data, error } = await supabase.rpc('get_site_settings');
-    if (error || !data) return null;
+    if (error || !data) return cachedSettings; // return stale cache if error
+    
+    cachedSettings = data;
+    lastFetchTime = now;
     return data;
   } catch {
-    return null;
+    return cachedSettings; // return stale cache if error
   }
 };
 
@@ -172,6 +185,59 @@ const server = createServer(async (req, res) => {
   try {
     const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const pathname = decodeURIComponent(requestUrl.pathname);
+
+    // API Routes for WhatsApp
+    if (pathname.startsWith('/api/whatsapp')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200);
+        res.end();
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/api/whatsapp/status') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(getWhatsAppStatus()));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/api/whatsapp/start') {
+        startWhatsApp();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/api/whatsapp/stop') {
+        stopWhatsApp();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/api/whatsapp/send-registration') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+          try {
+            console.log('Recebido request de send-registration:', body);
+            const { phone, name, courseName, qrCode } = JSON.parse(body);
+            sendRegistrationMessage(phone, name, courseName, qrCode);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+          } catch (e) {
+            console.error('Erro ao fazer parse do request de send-registration:', e);
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          }
+        });
+        return;
+      }
+    }
+
     const requestedPath = path.join(distDir, pathname);
     const safeRequestedPath = path.resolve(requestedPath);
 
@@ -214,6 +280,17 @@ const server = createServer(async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 3000);
+
+if (supabase) {
+  startCertificateJob(supabase);
+  
+  // Start WhatsApp automatically if any of the features are enabled
+  fetchSiteSettings().then(settings => {
+    if (settings && (settings.enable_whatsapp_messages || settings.enable_whatsapp_certificates)) {
+      startWhatsApp();
+    }
+  });
+}
 
 server.listen(port, () => {
   console.log(`Servidor iniciado em http://localhost:${port}`);

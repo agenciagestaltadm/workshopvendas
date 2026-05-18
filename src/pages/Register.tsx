@@ -87,7 +87,7 @@ const Register = () => {
   });
 
   const availabilityQuery = useQuery({
-    queryKey: ['course_availability', 'vendas-online'],
+    queryKey: ['course_availability'],
     enabled: true,
     refetchInterval: 120000, // 2 minutos
     staleTime: 60000,
@@ -247,6 +247,23 @@ const Register = () => {
         }
       }
       
+      // WhatsApp Integration
+      if (settingsQuery.data?.enable_whatsapp_messages) {
+        courses.forEach(course => {
+          const courseQr = qrCodes?.find(qr => qr.course_id === course.id);
+          fetch('/api/whatsapp/send-registration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: values.phone,
+              name: values.name.trim(),
+              courseName: course.name,
+              qrCode: courseQr?.qr_code || null
+            })
+          }).catch(console.error);
+        });
+      }
+
       navigate('/obrigado', {
         state: {
           registrationId,
@@ -511,6 +528,7 @@ const Register = () => {
                                 remaining: course.remaining,
                               }))}
                               disabled={availabilityQuery.isLoading || registerMutation.isPending}
+                              isLoading={availabilityQuery.isPending}
                             />
                           )}
                         </FormControl>

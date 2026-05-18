@@ -18,6 +18,7 @@ type CourseSelectProps = {
   onSelectionChange: (ids: string[]) => void;
   options: CourseSelectOption[];
   disabled?: boolean;
+  isLoading?: boolean;
 };
 
 const getCourseStatus = (remaining: number) => {
@@ -36,7 +37,7 @@ const formatStartsAt = (startsAt: string): { dateLabel: string; timeLabel: strin
   return { dateLabel, timeLabel, fullDate: `${dateLabel} · ${timeLabel}` };
 };
 
-export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, disabled }: CourseSelectProps) => {
+export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, disabled, isLoading }: CourseSelectProps) => {
   const byId = useMemo(() => {
     const map = new Map<string, CourseSelectOption>();
     for (const option of options) map.set(option.course_id, option);
@@ -59,6 +60,22 @@ export const CourseSelect = ({ selectedIds = [], onSelectionChange, options, dis
       onSelectionChange([courseId]);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full space-y-4">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col justify-between rounded-xl border border-border p-4 shadow-sm h-32 animate-pulse bg-muted/50">
+              <div className="h-4 w-3/4 bg-muted-foreground/20 rounded"></div>
+              <div className="h-4 w-1/2 bg-muted-foreground/20 rounded"></div>
+              <div className="h-8 w-full bg-muted-foreground/20 rounded mt-2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

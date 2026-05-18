@@ -27,6 +27,8 @@ export type SiteSettings = {
   documents_button_label: string | null;
   documents_page_title: string | null;
   documents_page_subtitle: string | null;
+  enable_whatsapp_messages: boolean | null;
+  enable_whatsapp_certificates: boolean | null;
   updated_at: string;
 };
 
@@ -66,6 +68,8 @@ export const defaultSiteSettings: SiteSettings = {
   documents_button_label: 'Documentos',
   documents_page_title: 'Documentos para Download',
   documents_page_subtitle: 'Baixe os documentos disponíveis',
+  enable_whatsapp_messages: false,
+  enable_whatsapp_certificates: false,
   updated_at: '',
 };
 
@@ -118,7 +122,7 @@ export const getSiteAssetUrl = (assetPath: string | null | undefined) => {
 
 export const useSiteSettings = () =>
   useQuery({
-    queryKey: ['site_settings'],
+    queryKey: ['site_settings', 'v2'],
     staleTime: 60000,
     refetchOnWindowFocus: false,
     refetchInterval: 300000,
@@ -169,7 +173,7 @@ export const useHeroBanners = () =>
 
 export const useRegistrationFormFields = () =>
   useQuery({
-    queryKey: ['registration_form_fields'],
+    queryKey: ['registration_form_fields', 'v2'],
     staleTime: 60000,
     refetchOnWindowFocus: false,
     queryFn: async () => {

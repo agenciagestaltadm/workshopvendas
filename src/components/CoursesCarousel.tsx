@@ -27,7 +27,7 @@ const CoursesCarousel = () => {
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
 
   const coursesQuery = useQuery({
-    queryKey: ['home_courses'],
+    queryKey: ['home_courses', 'v2'],
     enabled: isSupabaseConfigured,
     staleTime: 60000,
     refetchOnWindowFocus: false,

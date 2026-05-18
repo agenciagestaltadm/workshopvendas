@@ -14,15 +14,21 @@ import { useApplySiteTheme, useSiteSettings } from "./lib/site-settings";
 
 const queryClient = new QueryClient();
 
-const ThemeSync = () => {
+import { Loader2 } from "lucide-react";
+
+const AppRoutes = () => {
   const settingsQuery = useSiteSettings();
   useApplySiteTheme(settingsQuery.data);
-  return null;
-};
 
-const AppRoutes = () => (
-  <>
-    <ThemeSync />
+  if (settingsQuery.isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/registro" element={<Register />} />
@@ -33,8 +39,8 @@ const AppRoutes = () => (
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
-  </>
-);
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

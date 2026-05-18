@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Smartphone, QrCode, PowerOff } from 'lucide-react';
+import QRCode from 'react-qr-code';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -52,6 +53,48 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
   const [uploadingBanners, setUploadingBanners] = useState(false);
   const [bannerDeviceType, setBannerDeviceType] = useState<'desktop' | 'mobile' | 'all'>('all');
 
+  const [whatsappStatus, setWhatsappStatus] = useState<{ status: string; qr: string | null }>({ status: 'disconnected', qr: null });
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (open) {
+      const checkStatus = async () => {
+        try {
+          const res = await fetch('/api/whatsapp/status');
+          if (res.ok) {
+            const data = await res.json();
+            setWhatsappStatus(data);
+          }
+        } catch (e) {
+          // Ignore
+        }
+      };
+      checkStatus();
+      interval = setInterval(checkStatus, 3000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [open]);
+
+  const toggleWhatsAppConnection = async () => {
+    setWhatsappLoading(true);
+    try {
+      if (whatsappStatus.status === 'connected' || whatsappStatus.status === 'qr') {
+        await fetch('/api/whatsapp/stop', { method: 'POST' });
+        setWhatsappStatus({ status: 'disconnected', qr: null });
+      } else {
+        await fetch('/api/whatsapp/start', { method: 'POST' });
+        setWhatsappStatus({ status: 'connecting', qr: null });
+      }
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Falha ao comunicar com o serviço do WhatsApp.', variant: 'destructive' });
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
+
   const current = draft ?? settingsQuery.data ?? null;
 
   const syncDraft = () => {
@@ -91,6 +134,12 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
         enable_qr_code: current.enable_qr_code,
         enable_hero_banner: current.enable_hero_banner,
         signature_path: current.signature_path,
+        enable_documents_section: current.enable_documents_section,
+        documents_button_label: current.documents_button_label,
+        documents_page_title: current.documents_page_title,
+        documents_page_subtitle: current.documents_page_subtitle,
+        enable_whatsapp_messages: current.enable_whatsapp_messages,
+        enable_whatsapp_certificates: current.enable_whatsapp_certificates,
       };
       const { error } = await supabase.rpc('update_site_settings', { p_payload: payload });
       if (error) throw error;
@@ -321,6 +370,7 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                 <TabsTrigger value="seo">SEO</TabsTrigger>
                 <TabsTrigger value="theme">Theme Tokens</TabsTrigger>
                 <TabsTrigger value="fields">Campos de Inscrição</TabsTrigger>
+                <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
               </TabsList>
 
               <TabsContent value="branding" className="space-y-5">
@@ -975,6 +1025,96 @@ export const SiteSettingsDialog = ({ open, onOpenChange }: Props) => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="whatsapp" className="space-y-5">
+                <div className="rounded-xl border p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="h-6 w-6 text-primary" />
+                    <div>
+                      <h3 className="font-semibold">Conexão do WhatsApp</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Conecte o seu número para enviar mensagens automáticas.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 items-center p-4 bg-muted/30 rounded-lg border">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${whatsappStatus.status === 'connected' ? 'bg-green-500' : whatsappStatus.status === 'connecting' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'}`} />
+                        <span className="font-medium">
+                          {whatsappStatus.status === 'connected' ? 'Conectado' : whatsappStatus.status === 'connecting' ? 'Conectando...' : whatsappStatus.status === 'qr' ? 'Aguardando Leitura do QR Code' : 'Desconectado'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {whatsappStatus.status === 'connected' ? 'O sistema está pronto para enviar mensagens.' : 'O sistema não pode enviar mensagens no momento.'}
+                      </p>
+                    </div>
+                    
+                    {whatsappStatus.status === 'qr' && whatsappStatus.qr && (
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <QRCode value={whatsappStatus.qr} size={150} />
+                      </div>
+                    )}
+
+                    <Button 
+                      onClick={toggleWhatsAppConnection} 
+                      disabled={whatsappLoading}
+                      variant={whatsappStatus.status === 'connected' ? 'destructive' : 'default'}
+                      className="w-full sm:w-auto"
+                    >
+                      {whatsappStatus.status === 'connected' || whatsappStatus.status === 'qr' ? (
+                        <><PowerOff className="w-4 h-4 mr-2" /> Desconectar</>
+                      ) : (
+                        <><QrCode className="w-4 h-4 mr-2" /> Iniciar Conexão</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 rounded-md border p-3">
+                    <Switch
+                      checked={current.enable_whatsapp_messages ?? false}
+                      onCheckedChange={async (checked) => {
+                        setDraft({ ...current, enable_whatsapp_messages: checked });
+                        try {
+                          await persistSiteSettingsPartial({ enable_whatsapp_messages: checked });
+                          toast({ title: checked ? 'Envio ativado' : 'Envio desativado' });
+                        } catch (err) {
+                          setDraft({ ...current, enable_whatsapp_messages: !checked });
+                        }
+                      }}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">Enviar confirmação de inscrição</p>
+                      <p className="text-xs text-muted-foreground">
+                        Envia uma mensagem automática com o QR Code logo após a inscrição (delay de 8-15s).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-md border p-3">
+                    <Switch
+                      checked={current.enable_whatsapp_certificates ?? false}
+                      onCheckedChange={async (checked) => {
+                        setDraft({ ...current, enable_whatsapp_certificates: checked });
+                        try {
+                          await persistSiteSettingsPartial({ enable_whatsapp_certificates: checked });
+                          toast({ title: checked ? 'Envio ativado' : 'Envio desativado' });
+                        } catch (err) {
+                          setDraft({ ...current, enable_whatsapp_certificates: !checked });
+                        }
+                      }}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">Enviar certificado automaticamente</p>
+                      <p className="text-xs text-muted-foreground">
+                        Envia o certificado em PDF após o término do curso para quem teve presença confirmada (QR Code escaneado).
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>

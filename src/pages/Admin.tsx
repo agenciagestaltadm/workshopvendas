@@ -194,6 +194,86 @@ const formatDateShort = (value: string) => {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
 };
 
+const DateTimeInput = ({ value, onChange, id }: { value: string; onChange: (val: string) => void; id?: string }) => {
+  const normalizeValue = (val: string) => {
+    if (!val) return ['', ''];
+    try {
+      // Se tiver Z ou fuso horário, converter para local (opcional) ou apenas pegar as partes
+      // Para manter a consistência, vamos apenas separar pelo T
+      const [d, t] = val.split('T');
+      const timeStr = t ? t.substring(0, 5) : ''; // pega apenas HH:mm
+      return [d, timeStr];
+    } catch {
+      return ['', ''];
+    }
+  };
+
+  const [datePart, timePart] = normalizeValue(value);
+  
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    if (!newDate) {
+      onChange('');
+      return;
+    }
+    onChange(`${newDate}T${timePart || '00:00'}`);
+  };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newTime = e.target.value.replace(/[^0-9:]/g, '');
+    
+    // Auto-format HH:mm
+    if (newTime.length === 2 && !newTime.includes(':') && timePart.length < 2) {
+      newTime += ':';
+    }
+    if (newTime.length > 5) {
+      newTime = newTime.substring(0, 5);
+    }
+    
+    onChange(datePart ? `${datePart}T${newTime}` : `T${newTime}`);
+  };
+
+  const handleTimeBlur = () => {
+    if (!timePart) return;
+    let [h, m] = timePart.split(':');
+    h = h || '00';
+    m = m || '00';
+    // Validate hours and minutes
+    let hourInt = parseInt(h, 10);
+    let minInt = parseInt(m, 10);
+    if (isNaN(hourInt)) hourInt = 0;
+    if (isNaN(minInt)) minInt = 0;
+    if (hourInt > 23) hourInt = 23;
+    if (minInt > 59) minInt = 59;
+    
+    const formattedTime = `${hourInt.toString().padStart(2, '0')}:${minInt.toString().padStart(2, '0')}`;
+    if (datePart) {
+      onChange(`${datePart}T${formattedTime}`);
+    }
+  };
+
+  return (
+    <div className="flex gap-2 w-full mt-1">
+      <Input
+        id={id}
+        type="date"
+        value={datePart}
+        onChange={handleDateChange}
+        className="flex-1"
+      />
+      <Input
+        type="text"
+        placeholder="HH:mm"
+        value={timePart}
+        onChange={handleTimeChange}
+        onBlur={handleTimeBlur}
+        maxLength={5}
+        className="w-24 text-center"
+      />
+    </div>
+  );
+};
+
 const Admin = () => {
   const COURSES_BUCKET = 'courses-images';
   const navigate = useNavigate();
@@ -897,7 +977,7 @@ const Admin = () => {
 
     if (step === 2) {
       if (!courseFormData.time_label?.trim()) {
-        toast({ title: 'Horário obrigatório', description: 'Informe o horário de realização do curso.', variant: 'destructive' });
+        toast({ title: 'Rótulo de horário obrigatório', description: 'Informe o rótulo de horário (ex: 14h às 17h) do curso.', variant: 'destructive' });
         return false;
       }
       if (!courseFormData.starts_at) {
@@ -2110,7 +2190,26 @@ const Admin = () => {
             {courseFormStep === 2 && (
               <>
                 <div>
-                  <Label htmlFor="course-time-label">Horário do Curso *</Label>
+              <Label htmlFor="course-date">Data e Hora de Início *</Label>
+              <DateTimeInput
+                id="course-date"
+                value={courseFormData.starts_at}
+                onChange={(val) => setCourseFormData({ ...courseFormData, starts_at: val })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="course-end-date">Data e Hora de Término</Label>
+              <DateTimeInput
+                id="course-end-date"
+                value={courseFormData.ends_at}
+                onChange={(val) => setCourseFormData({ ...courseFormData, ends_at: val })}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Usado para liberar o certificado após o término do curso.
+              </p>
+            </div>
+            <div>
+                  <Label htmlFor="course-time-label">Rótulo de Horário *</Label>
                   <Input
                     id="course-time-label"
                     placeholder="ex: 14h às 17h30"
@@ -2118,30 +2217,10 @@ const Admin = () => {
                     onChange={(e) => setCourseFormData({ ...courseFormData, time_label: e.target.value })}
                     className="mt-1"
                   />
-                </div>
-                <div>
-              <Label htmlFor="course-date">Data e Hora de Início *</Label>
-              <Input
-                id="course-date"
-                type="datetime-local"
-                value={courseFormData.starts_at}
-                onChange={(e) => setCourseFormData({ ...courseFormData, starts_at: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="course-end-date">Data e Hora de Término</Label>
-              <Input
-                id="course-end-date"
-                type="datetime-local"
-                value={courseFormData.ends_at}
-                onChange={(e) => setCourseFormData({ ...courseFormData, ends_at: e.target.value })}
-                className="mt-1"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Usado para liberar o certificado após o término do curso.
+                  <p className="mt-1 text-xs text-muted-foreground">
+                Exibido como texto na Home e no Certificado.
               </p>
-            </div>
+                </div>
                 <div>
               <Label htmlFor="course-hours-label">Carga Horária</Label>
               <Input
