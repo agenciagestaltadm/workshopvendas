@@ -6,7 +6,7 @@ import QRCodeSVG from 'react-qr-code';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
-import { useSiteSettings } from '@/lib/site-settings';
+import { useSiteSettings, getSiteAssetUrl } from '@/lib/site-settings';
 
 type CourseInfo = {
   id: string;
@@ -47,6 +47,7 @@ const Thanks = () => {
   const qrRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const settingsQuery = useSiteSettings();
   const isQrEnabled = settingsQuery.data?.enable_qr_code ?? false;
+  const logoSrc = getSiteAssetUrl(settingsQuery.data?.logo_nav_path) ?? getSiteAssetUrl(settingsQuery.data?.logo_main_path);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsReady(true));
@@ -149,14 +150,18 @@ const Thanks = () => {
               </Button>
             </div>
             <span className="flex items-center justify-center">
-              <img
-                src="/LogoCanaãGastronomia.png"
-                alt="Canaã Gastronomia 2026"
-                width={140}
-                height={40}
-                decoding="async"
-                className="h-[36px] w-auto object-contain sm:h-[40px]"
-              />
+              {logoSrc ? (
+                <img
+                  src={logoSrc}
+                  alt={settingsQuery.data?.seo_title || "Logo do evento"}
+                  width={140}
+                  height={40}
+                  decoding="async"
+                  className="h-[36px] w-auto object-contain sm:h-[40px]"
+                />
+              ) : (
+                <span className="font-semibold text-foreground">{settingsQuery.data?.seo_title || "Evento"}</span>
+              )}
             </span>
             <div />
           </div>

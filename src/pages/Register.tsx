@@ -89,7 +89,9 @@ const Register = () => {
   const availabilityQuery = useQuery({
     queryKey: ['course_availability', 'vendas-online'],
     enabled: true,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // 2 minutos
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
     retry: 3,
     retryDelay: 2000,
     queryFn: async () => {

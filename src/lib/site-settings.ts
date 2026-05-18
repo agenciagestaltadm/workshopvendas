@@ -119,9 +119,9 @@ export const getSiteAssetUrl = (assetPath: string | null | undefined) => {
 export const useSiteSettings = () =>
   useQuery({
     queryKey: ['site_settings'],
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+    refetchInterval: 300000,
     queryFn: async () => {
       if (!isSupabaseConfigured) return defaultSiteSettings;
       const supabase = requireSupabase();
@@ -156,8 +156,8 @@ export const useIsMobile = () => {
 export const useHeroBanners = () =>
   useQuery({
     queryKey: ['hero_banners'],
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!isSupabaseConfigured) return [] as HeroBanner[];
       const supabase = requireSupabase();
@@ -170,6 +170,8 @@ export const useHeroBanners = () =>
 export const useRegistrationFormFields = () =>
   useQuery({
     queryKey: ['registration_form_fields'],
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!isSupabaseConfigured) return [] as RegistrationFormField[];
       const supabase = requireSupabase();

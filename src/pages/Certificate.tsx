@@ -149,14 +149,18 @@ const Certificate = () => {
               </Button>
             </div>
             <span className="flex items-center justify-center">
-              <img
-                src={getSiteAssetUrl(settingsQuery.data?.logo_nav_path) ?? '/LogoCanaãGastronomia.png'}
-                alt="Logo"
-                width={140}
-                height={40}
-                decoding="async"
-                className="h-[36px] w-auto object-contain sm:h-[40px]"
-              />
+              {getSiteAssetUrl(settingsQuery.data?.logo_nav_path) ? (
+                <img
+                  src={getSiteAssetUrl(settingsQuery.data?.logo_nav_path) as string}
+                  alt="Logo"
+                  width={140}
+                  height={40}
+                  decoding="async"
+                  className="h-[36px] w-auto object-contain sm:h-[40px]"
+                />
+              ) : (
+                <span className="font-semibold text-foreground">{settingsQuery.data?.seo_title || "Evento"}</span>
+              )}
             </span>
             <div />
           </div>

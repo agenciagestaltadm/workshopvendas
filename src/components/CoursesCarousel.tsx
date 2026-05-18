@@ -29,6 +29,8 @@ const CoursesCarousel = () => {
   const coursesQuery = useQuery({
     queryKey: ['home_courses'],
     enabled: isSupabaseConfigured,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const supabase = requireSupabase();
       const { data, error } = await supabase
