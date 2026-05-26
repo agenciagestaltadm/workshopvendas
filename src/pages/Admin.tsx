@@ -166,6 +166,34 @@ const isRegistrationPendingScan = (row: RegistrationRow) =>
 const getPendingScanCourses = (row: RegistrationRow) =>
   (row.registration_courses ?? []).filter(isCoursePendingScan);
 
+type ExportScanFilter = 'all' | 'scanned' | 'pending';
+
+const matchesExportScanFilter = (
+  row: RegistrationRow,
+  filter: ExportScanFilter,
+  courseId?: string,
+): boolean => {
+  if (filter === 'all') return true;
+  if (courseId) {
+    const rc = row.registration_courses.find((r) => r.course_id === courseId);
+    if (!rc) return false;
+    return filter === 'scanned' ? isCourseScanned(rc) : isCoursePendingScan(rc);
+  }
+  return filter === 'scanned' ? isRegistrationScanned(row) : isRegistrationPendingScan(row);
+};
+
+const exportScanFilenameSuffix = (filter: ExportScanFilter) => {
+  if (filter === 'scanned') return 'escaneados';
+  if (filter === 'pending') return 'pendentes';
+  return '';
+};
+
+const exportScanFilterLabel = (filter: ExportScanFilter) => {
+  if (filter === 'scanned') return 'só escaneados';
+  if (filter === 'pending') return 'só não escaneados';
+  return '';
+};
+
 const formatCustomFieldValue = (value: unknown): string => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
@@ -176,7 +204,11 @@ const formatCustomFieldValue = (value: unknown): string => {
 };
 
 /** Gera linhas de export. Com `filterCourseId`, inclui só inscrições nesse curso e a coluna Curso reflete só esse curso. */
-const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId?: string): FullExportRow[] => {
+const buildFullExportRows = (
+  rows: RegistrationRow[] | undefined,
+  filterCourseId?: string,
+  scanFilter: ExportScanFilter = 'all',
+): FullExportRow[] => {
   if (!rows?.length) return [];
   const out: FullExportRow[] = [];
   for (const row of rows) {
@@ -184,6 +216,7 @@ const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId
       ? row.registration_courses.filter((rc) => rc.course_id === filterCourseId)
       : row.registration_courses;
     if (filterCourseId && rcs.length === 0) continue;
+    if (!matchesExportScanFilter(row, scanFilter, filterCourseId)) continue;
     const courseParts = rcs.map((rc) => {
       const courseName = rc.courses?.name ?? rc.course_id;
       const date = rc.courses?.starts_at ? formatDateTime(rc.courses.starts_at) : '';
@@ -326,6 +359,7 @@ const Admin = () => {
   const [disparoExportScope, setDisparoExportScope] = useState<'all' | 'course'>('all');
   const [disparoExportCourseId, setDisparoExportCourseId] = useState('');
   const [disparoExportFormat, setDisparoExportFormat] = useState<'xlsx' | 'csv'>('xlsx');
+  const [exportScanFilter, setExportScanFilter] = useState<ExportScanFilter>('all');
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteScope, setBulkDeleteScope] = useState<'all' | 'course'>('all');
   const [bulkDeleteCourseId, setBulkDeleteCourseId] = useState('');
@@ -1146,6 +1180,7 @@ const Admin = () => {
   const openExportFullDialog = () => {
     setFullExportScope('all');
     setFullExportCourseId(coursesForExportSelect[0]?.course_id ?? '');
+    setExportScanFilter('all');
     setExportFullDialogOpen(true);
   };
 
@@ -1154,8 +1189,12 @@ const Admin = () => {
     setDisparoExportScope('all');
     setDisparoExportFormat('xlsx');
     setDisparoExportCourseId(coursesForExportSelect[0]?.course_id ?? '');
+    setExportScanFilter('all');
     setExportDisparoDialogOpen(true);
   };
+
+  const effectiveExportScanFilter = (): ExportScanFilter =>
+    isQrEnabled ? exportScanFilter : 'all';
 
   const openBulkDeleteDialog = () => {
     setBulkDeleteScope('all');
@@ -1189,15 +1228,21 @@ const Admin = () => {
     }
 
     const filterId = fullExportScope === 'course' ? fullExportCourseId : undefined;
-    const rows = buildFullExportRows(registrationsQuery.data, filterId);
+    const scanFilter = effectiveExportScanFilter();
+    const rows = buildFullExportRows(registrationsQuery.data, filterId, scanFilter);
 
     if (rows.length === 0) {
+      const scanHint = exportScanFilterLabel(scanFilter);
       toast({
         title: 'Nada para exportar',
         description:
           fullExportScope === 'course'
-            ? 'Nenhuma inscrição encontrada para este curso.'
-            : 'Nenhuma inscrição foi encontrada.',
+            ? scanHint
+              ? `Nenhuma inscrição ${scanHint} para este curso.`
+              : 'Nenhuma inscrição encontrada para este curso.'
+            : scanHint
+              ? `Nenhuma inscrição ${scanHint}.`
+              : 'Nenhuma inscrição foi encontrada.',
       });
       return;
     }
@@ -1220,10 +1265,12 @@ const Admin = () => {
       }));
       const blob = buildFullWorkbookBlob(rows, customFieldColumns);
       const date = new Date().toISOString().slice(0, 10);
+      const scanSuffix = exportScanFilenameSuffix(scanFilter);
+      const scanPart = scanSuffix ? `-${scanSuffix}` : '';
       const filename =
         fullExportScope === 'all'
-          ? `inscricoes-completo-${date}.xlsx`
-          : `inscricoes-curso-${fullExportCourseId.replace(/[^a-zA-Z0-9-_]/g, '_')}-${date}.xlsx`;
+          ? `inscricoes-completo${scanPart}-${date}.xlsx`
+          : `inscricoes-curso-${fullExportCourseId.replace(/[^a-zA-Z0-9-_]/g, '_')}${scanPart}-${date}.xlsx`;
       downloadBlob(filename, blob);
       toast({ title: 'Download iniciado', description: 'Arquivo Excel gerado com sucesso.' });
       setExportFullDialogOpen(false);
@@ -1235,9 +1282,16 @@ const Admin = () => {
     }
   };
 
-  const buildDisparoRows = (scope: 'all' | 'course', selectedCourseId?: string): DisparoExportRow[] => {
+  const buildDisparoRows = (
+    scope: 'all' | 'course',
+    selectedCourseId?: string,
+    scanFilter: ExportScanFilter = 'all',
+  ): DisparoExportRow[] => {
     const map = new Map<string, DisparoExportRow & { tagsSet: Set<string> }>();
+    const courseId = scope === 'course' ? selectedCourseId : undefined;
     for (const row of registrationsQuery.data ?? []) {
+      if (!matchesExportScanFilter(row, scanFilter, courseId)) continue;
+
       const relevantCourses = scope === 'course'
         ? row.registration_courses.filter((rc) => rc.course_id === selectedCourseId)
         : row.registration_courses;
@@ -1278,9 +1332,16 @@ const Admin = () => {
       return;
     }
 
-    const rows = buildDisparoRows(disparoExportScope, disparoExportCourseId);
+    const scanFilter = effectiveExportScanFilter();
+    const rows = buildDisparoRows(disparoExportScope, disparoExportCourseId, scanFilter);
     if (rows.length === 0) {
-      toast({ title: 'Nada para exportar', description: 'Nenhum contato encontrado com este filtro.' });
+      const scanHint = exportScanFilterLabel(scanFilter);
+      toast({
+        title: 'Nada para exportar',
+        description: scanHint
+          ? `Nenhum contato ${scanHint} com este filtro.`
+          : 'Nenhum contato encontrado com este filtro.',
+      });
       return;
     }
 
@@ -1299,12 +1360,14 @@ const Admin = () => {
     setExporting('disparo');
     try {
       const date = new Date().toISOString().slice(0, 10);
+      const scanSuffix = exportScanFilenameSuffix(scanFilter);
+      const scanPart = scanSuffix ? `-${scanSuffix}` : '';
       const scopeLabel = disparoExportScope === 'all'
         ? 'todos-cursos'
         : `curso-${disparoExportCourseId.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
       const isCsv = disparoExportFormat === 'csv';
       const blob = isCsv ? buildDisparoContactsCsvBlob(rows) : buildDisparoContactsXlsxBlob(rows);
-      const filename = `disparo-${scopeLabel}-${date}.${isCsv ? 'csv' : 'xlsx'}`;
+      const filename = `disparo-${scopeLabel}${scanPart}-${date}.${isCsv ? 'csv' : 'xlsx'}`;
       downloadBlob(filename, blob);
       toast({ title: 'Download iniciado', description: `Arquivo ${isCsv ? 'CSV' : 'Excel'} gerado com sucesso.` });
       setExportDisparoDialogOpen(false);
@@ -1982,6 +2045,40 @@ const Admin = () => {
                 )}
               </div>
             )}
+            {isQrEnabled && (
+              <div className="space-y-2 border-t border-border pt-4">
+                <Label className="text-sm font-medium">Status do QR Code</Label>
+                <p className="text-sm text-muted-foreground">
+                  {fullExportScope === 'course'
+                    ? 'Filtra pelo check-in no curso selecionado acima.'
+                    : 'Com todos os cursos: escaneado exige check-in em todos os cursos da pessoa.'}
+                </p>
+                <RadioGroup
+                  value={exportScanFilter}
+                  onValueChange={(v) => setExportScanFilter(v as ExportScanFilter)}
+                  className="space-y-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <RadioGroupItem value="all" id="export-scan-all" className="mt-1" />
+                    <Label htmlFor="export-scan-all" className="cursor-pointer font-medium">
+                      Todos os contatos
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <RadioGroupItem value="scanned" id="export-scan-scanned" className="mt-1" />
+                    <Label htmlFor="export-scan-scanned" className="cursor-pointer font-medium">
+                      Só escaneados
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <RadioGroupItem value="pending" id="export-scan-pending" className="mt-1" />
+                    <Label htmlFor="export-scan-pending" className="cursor-pointer font-medium">
+                      Só não escaneados
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setExportFullDialogOpen(false)}>
@@ -2189,6 +2286,40 @@ const Admin = () => {
                       </SelectContent>
                     </Select>
                   )}
+                </div>
+              )}
+              {isQrEnabled && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <Label className="text-sm font-medium">Status do QR Code</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {disparoExportScope === 'course'
+                      ? 'Filtra pelo check-in no curso selecionado acima.'
+                      : 'Com todos os cursos: escaneado exige check-in em todos os cursos da pessoa.'}
+                  </p>
+                  <RadioGroup
+                    value={exportScanFilter}
+                    onValueChange={(v) => setExportScanFilter(v as ExportScanFilter)}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem value="all" id="disparo-scan-all" className="mt-1" />
+                      <Label htmlFor="disparo-scan-all" className="cursor-pointer font-medium">
+                        Todos os contatos
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem value="scanned" id="disparo-scan-scanned" className="mt-1" />
+                      <Label htmlFor="disparo-scan-scanned" className="cursor-pointer font-medium">
+                        Só escaneados
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem value="pending" id="disparo-scan-pending" className="mt-1" />
+                      <Label htmlFor="disparo-scan-pending" className="cursor-pointer font-medium">
+                        Só não escaneados
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               )}
             </div>
