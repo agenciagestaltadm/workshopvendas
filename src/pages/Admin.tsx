@@ -54,6 +54,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -117,6 +120,7 @@ type RegistrationCourse = {
   courses: CourseInfo | null;
   qr_code?: string | null;
   scanned?: boolean;
+  is_scanned?: boolean;
   scanned_at?: string | null;
 };
 
@@ -145,6 +149,12 @@ const formatDateTime = (value: string) => {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 };
+
+const isCoursePendingScan = (rc: RegistrationCourse) =>
+  !rc.scanned && !rc.is_scanned;
+
+const getPendingScanCourses = (row: RegistrationRow) =>
+  (row.registration_courses ?? []).filter(isCoursePendingScan);
 
 const formatCustomFieldValue = (value: unknown): string => {
   if (value === null || value === undefined) return '';
@@ -418,6 +428,7 @@ const Admin = () => {
             course_id,
             qr_code,
             scanned,
+            is_scanned,
             scanned_at,
             courses(name, starts_at)
           ),
@@ -594,6 +605,49 @@ const Admin = () => {
       toast({ title: 'Não foi possível sair', description: message, variant: 'destructive' });
     }
   };
+
+  const markScannedMutation = useMutation({
+    mutationFn: async ({
+      registrationId,
+      courseId,
+    }: {
+      registrationId: string;
+      courseId: string;
+    }) => {
+      const supabase = requireSupabase();
+      const { error } = await supabase.rpc('admin_mark_registration_course_scanned', {
+        p_registration_id: registrationId,
+        p_course_id: courseId,
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+      toast({
+        title: 'Marcado como escaneado',
+        description: 'O check-in foi registrado com sucesso.',
+      });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      let description = message;
+      if (message.includes('ALREADY_SCANNED')) {
+        description = 'Esta inscrição já estava marcada como escaneada.';
+      } else if (message.includes('QR_DISABLED')) {
+        description = 'Ative o QR Code nas configurações do site.';
+      } else if (message.includes('Could not find the function') || message.includes('PGRST202')) {
+        description =
+          'Execute supabase/apply_admin_mark_registration_scanned.sql no SQL Editor do Supabase.';
+      }
+      toast({
+        title: 'Não foi possível marcar como escaneado',
+        description,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (row: RegistrationRow) => {
@@ -1543,6 +1597,7 @@ const Admin = () => {
               {filteredRegistrations.map((row) => {
                 const courseCount = row.registration_courses?.length ?? 0;
                 const isExpanded = expandedItems.includes(row.id);
+                const pendingScanCourses = isQrEnabled ? getPendingScanCourses(row) : [];
 
                 return (
                   <div
@@ -1604,6 +1659,46 @@ const Admin = () => {
                                 <Mail className="mr-2 h-4 w-4" />
                                 Email
                               </DropdownMenuItem>
+                              {pendingScanCourses.length === 1 && (
+                                <DropdownMenuItem
+                                  disabled={markScannedMutation.isPending}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markScannedMutation.mutate({
+                                      registrationId: row.id,
+                                      courseId: pendingScanCourses[0].course_id,
+                                    });
+                                  }}
+                                >
+                                  <ScanLine className="mr-2 h-4 w-4" />
+                                  Marcar como escaneado
+                                </DropdownMenuItem>
+                              )}
+                              {pendingScanCourses.length > 1 && (
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <ScanLine className="mr-2 h-4 w-4" />
+                                    Marcar como escaneado
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    {pendingScanCourses.map((rc) => (
+                                      <DropdownMenuItem
+                                        key={rc.course_id}
+                                        disabled={markScannedMutation.isPending}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          markScannedMutation.mutate({
+                                            registrationId: row.id,
+                                            courseId: rc.course_id,
+                                          });
+                                        }}
+                                      >
+                                        {rc.courses?.name ?? rc.course_id}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
@@ -1634,16 +1729,16 @@ const Admin = () => {
                                   {rc.courses?.starts_at ? formatDateTime(rc.courses.starts_at) : 'Data não definida'}
                                 </p>
                               </div>
-                              {rc.qr_code && isQrEnabled && (
+                              {isQrEnabled && (
                                 <Badge
                                   variant="outline"
                                   className={
-                                    rc.scanned
+                                    rc.scanned || rc.is_scanned
                                       ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
                                       : 'border-amber-500 text-amber-600 bg-amber-50'
                                   }
                                 >
-                                  {rc.scanned ? 'Escaneado' : 'Pendente'}
+                                  {rc.scanned || rc.is_scanned ? 'Escaneado' : 'Pendente'}
                                 </Badge>
                               )}
                             </div>
