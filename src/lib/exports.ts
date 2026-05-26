@@ -7,6 +7,8 @@ export type FullExportRow = {
   phone: string;
   document: string;
   course: string;
+  qrStatus?: string;
+  scannedAt?: string;
   customFields?: Record<string, string>;
 };
 
@@ -84,7 +86,7 @@ export const buildFullWorkbookArrayBuffer = (
   rows: FullExportRow[],
   customFieldColumns: Array<{ key: string; label: string }> = [],
 ) => {
-  const baseHeader = ['Data', 'Nome', 'Email', 'Telefone', 'CPF/CNPJ', 'Curso'];
+  const baseHeader = ['Data', 'Nome', 'Email', 'Telefone', 'CPF/CNPJ', 'Curso', 'Status QR', 'Data escaneamento'];
   const customHeader = customFieldColumns.map((column) => column.label);
   const header = [...baseHeader, ...customHeader];
   const data = rows.map((row) => [
@@ -94,6 +96,8 @@ export const buildFullWorkbookArrayBuffer = (
     row.phone,
     row.document,
     row.course,
+    row.qrStatus ?? '',
+    row.scannedAt ?? '',
     ...customFieldColumns.map((column) => row.customFields?.[column.key] ?? ''),
   ]);
   const ws = XLSX.utils.aoa_to_sheet([header, ...data]);

@@ -89,6 +89,7 @@ import { SiteSettingsDialog } from '@/components/admin/SiteSettingsDialog';
 import QRCodeScanner from '@/components/admin/QRCodeScanner';
 import DocumentsSection from '@/components/admin/DocumentsSection';
 import ManualRegistrationDialog from '@/components/admin/ManualRegistrationDialog';
+import EditRegistrationDialog from '@/components/admin/EditRegistrationDialog';
 
 const ADMIN_EMAIL = 'admgestalt@gmail.com';
 
@@ -150,8 +151,17 @@ const formatDateTime = (value: string) => {
   return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 };
 
-const isCoursePendingScan = (rc: RegistrationCourse) =>
-  !rc.scanned && !rc.is_scanned;
+const isCourseScanned = (rc: RegistrationCourse) => !!(rc.scanned || rc.is_scanned);
+
+const isCoursePendingScan = (rc: RegistrationCourse) => !isCourseScanned(rc);
+
+const isRegistrationScanned = (row: RegistrationRow) => {
+  const courses = row.registration_courses ?? [];
+  return courses.length > 0 && courses.every(isCourseScanned);
+};
+
+const isRegistrationPendingScan = (row: RegistrationRow) =>
+  (row.registration_courses ?? []).some(isCoursePendingScan);
 
 const getPendingScanCourses = (row: RegistrationRow) =>
   (row.registration_courses ?? []).filter(isCoursePendingScan);
@@ -186,6 +196,17 @@ const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId
         formatCustomFieldValue(answer.value_json),
       ]),
     );
+    const qrStatusParts = rcs.map((rc) => {
+      const courseName = rc.courses?.name ?? rc.course_id;
+      return `${courseName}: ${isCourseScanned(rc) ? 'Escaneado' : 'Pendente'}`;
+    });
+    const scannedAtParts = rcs
+      .filter((rc) => rc.scanned_at)
+      .map((rc) => {
+        const courseName = rc.courses?.name ?? rc.course_id;
+        return `${courseName}: ${formatDateTime(rc.scanned_at!)}`;
+      });
+
     out.push({
       createdAt: row.created_at,
       name: row.name,
@@ -194,6 +215,8 @@ const buildFullExportRows = (rows: RegistrationRow[] | undefined, filterCourseId
       document: row.document,
       course,
       customFields,
+      qrStatus: qrStatusParts.join('; '),
+      scannedAt: scannedAtParts.join('; '),
     });
   }
   return out;
@@ -342,7 +365,9 @@ const Admin = () => {
 
   // Estados para busca e filtro
   const [searchQuery, setSearchQuery] = useState('');
+  const [scanFilter, setScanFilter] = useState<'all' | 'scanned' | 'pending'>('all');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [editTarget, setEditTarget] = useState<RegistrationRow | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -478,20 +503,45 @@ const Admin = () => {
     );
   }, [availabilityQuery.data]);
 
-  // Filtro de inscrições
+  const scanStats = useMemo(() => {
+    const rows = registrationsQuery.data ?? [];
+    let scanned = 0;
+    let pending = 0;
+    for (const row of rows) {
+      const courseCount = row.registration_courses?.length ?? 0;
+      if (courseCount === 0) continue;
+      if (isRegistrationScanned(row)) scanned += 1;
+      else if (isRegistrationPendingScan(row)) pending += 1;
+    }
+    return { scanned, pending, total: rows.length };
+  }, [registrationsQuery.data]);
+
+  // Filtro de inscrições (status QR + busca textual)
   const filteredRegistrations = useMemo(() => {
-    if (!searchQuery.trim()) return registrationsQuery.data ?? [];
+    let rows = registrationsQuery.data ?? [];
+
+    if (isQrEnabled && scanFilter === 'scanned') {
+      rows = rows.filter(isRegistrationScanned);
+    } else if (isQrEnabled && scanFilter === 'pending') {
+      rows = rows.filter(
+        (row) =>
+          (row.registration_courses?.length ?? 0) > 0 && isRegistrationPendingScan(row),
+      );
+    }
+
+    if (!searchQuery.trim()) return rows;
     const query = searchQuery.toLowerCase();
-    return (registrationsQuery.data ?? []).filter(row =>
-      row.name.toLowerCase().includes(query) ||
-      row.email.toLowerCase().includes(query) ||
-      row.phone.includes(query) ||
-      row.document.includes(query) ||
-      row.registration_courses.some(rc =>
-        rc.courses?.name?.toLowerCase().includes(query)
-      )
+    return rows.filter(
+      (row) =>
+        row.name.toLowerCase().includes(query) ||
+        row.email.toLowerCase().includes(query) ||
+        row.phone.includes(query) ||
+        row.document.includes(query) ||
+        row.registration_courses.some((rc) =>
+          rc.courses?.name?.toLowerCase().includes(query),
+        ),
     );
-  }, [registrationsQuery.data, searchQuery]);
+  }, [registrationsQuery.data, searchQuery, scanFilter, isQrEnabled]);
 
   // Mutações para controle de cursos
   const updateCapacityMutation = useMutation({
@@ -1567,8 +1617,48 @@ const Admin = () => {
               )}
             </div>
 
+            {isQrEnabled && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{scanStats.scanned}</span> escaneados
+                  {' · '}
+                  <span className="font-medium text-foreground">{scanStats.pending}</span> pendentes
+                  {' · '}
+                  <span className="font-medium text-foreground">{scanStats.total}</span> total
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={scanFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setScanFilter('all')}
+                  >
+                    Todos
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={scanFilter === 'scanned' ? 'default' : 'outline'}
+                    onClick={() => setScanFilter('scanned')}
+                  >
+                    Escaneados
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={scanFilter === 'pending' ? 'default' : 'outline'}
+                    onClick={() => setScanFilter('pending')}
+                  >
+                    Pendentes
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <p className="mt-2 text-sm text-muted-foreground">
-              {filteredRegistrations.length} {filteredRegistrations.length === 1 ? 'inscrição encontrada' : 'inscrições encontradas'}
+              {filteredRegistrations.length}{' '}
+              {filteredRegistrations.length === 1 ? 'inscrição encontrada' : 'inscrições encontradas'}
+              {isQrEnabled && scanFilter !== 'all' ? ` (${scanFilter === 'scanned' ? 'escaneados' : 'pendentes'})` : ''}
             </p>
 
             {/* Lista de Inscrições em Cards Expansíveis */}
@@ -1616,12 +1706,20 @@ const Admin = () => {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-foreground">{row.name}</h3>
                             <Badge variant="secondary" className="text-xs">
                               <BookOpen className="mr-1 h-3 w-3" />
                               {courseCount} {courseCount === 1 ? 'curso' : 'cursos'}
                             </Badge>
+                            {isQrEnabled && isRegistrationPendingScan(row) && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-amber-500 text-amber-600 bg-amber-50"
+                              >
+                                Pendente QR
+                              </Badge>
+                            )}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">{row.email}</p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -1658,6 +1756,15 @@ const Admin = () => {
                               >
                                 <Mail className="mr-2 h-4 w-4" />
                                 Email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditTarget(row);
+                                }}
+                              >
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Editar
                               </DropdownMenuItem>
                               {pendingScanCourses.length === 1 && (
                                 <DropdownMenuItem
@@ -1733,12 +1840,12 @@ const Admin = () => {
                                 <Badge
                                   variant="outline"
                                   className={
-                                    rc.scanned || rc.is_scanned
+                                    isCourseScanned(rc)
                                       ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
                                       : 'border-amber-500 text-amber-600 bg-amber-50'
                                   }
                                 >
-                                  {rc.scanned || rc.is_scanned ? 'Escaneado' : 'Pendente'}
+                                  {isCourseScanned(rc) ? 'Escaneado' : 'Pendente'}
                                 </Badge>
                               )}
                             </div>
@@ -1754,7 +1861,13 @@ const Admin = () => {
                 <div className="rounded-xl border border-border bg-card p-8 text-center">
                   <Users className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-muted-foreground">
-                    {searchQuery ? 'Nenhuma inscrição encontrada para esta busca.' : 'Nenhuma inscrição registrada ainda.'}
+                    {searchQuery
+                      ? 'Nenhuma inscrição encontrada para esta busca.'
+                      : isQrEnabled && scanFilter !== 'all'
+                        ? scanFilter === 'scanned'
+                          ? 'Nenhuma inscrição com QR escaneado.'
+                          : 'Nenhuma inscrição com QR pendente.'
+                        : 'Nenhuma inscrição registrada ainda.'}
                   </p>
                 </div>
               )}
@@ -1775,6 +1888,24 @@ const Admin = () => {
           remaining: course.remaining,
         }))}
         isQrEnabled={isQrEnabled}
+        onSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+          void queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+        }}
+      />
+      <EditRegistrationDialog
+        open={Boolean(editTarget)}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+        registration={editTarget}
+        courses={(availabilityQuery.data ?? []).map((course) => ({
+          course_id: course.course_id,
+          name: course.name,
+          starts_at: course.starts_at,
+          is_active: course.is_active,
+          remaining: course.remaining,
+        }))}
         onSuccess={() => {
           void queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
           void queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
