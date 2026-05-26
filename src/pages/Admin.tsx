@@ -85,6 +85,7 @@ import { useSiteSettings } from '@/lib/site-settings';
 import { SiteSettingsDialog } from '@/components/admin/SiteSettingsDialog';
 import QRCodeScanner from '@/components/admin/QRCodeScanner';
 import DocumentsSection from '@/components/admin/DocumentsSection';
+import ManualRegistrationDialog from '@/components/admin/ManualRegistrationDialog';
 
 const ADMIN_EMAIL = 'admgestalt@gmail.com';
 
@@ -296,6 +297,7 @@ const Admin = () => {
   const [bulkDeleteScope, setBulkDeleteScope] = useState<'all' | 'course'>('all');
   const [bulkDeleteCourseId, setBulkDeleteCourseId] = useState('');
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [manualRegistrationOpen, setManualRegistrationOpen] = useState(false);
 
   // Estados para edição de curso
   const [editingCourse, setEditingCourse] = useState<CourseAvailability | null>(null);
@@ -1476,6 +1478,10 @@ const Admin = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold text-foreground">Inscrições</h2>
               <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" onClick={() => setManualRegistrationOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar inscrição manual
+                </Button>
                 <Button type="button" variant="outline" onClick={openExportFullDialog} disabled={exporting !== null}>
                   {exporting === 'full' ? 'Gerando...' : 'Baixar Excel Completo'}
                 </Button>
@@ -1663,6 +1669,22 @@ const Admin = () => {
       </main>
       <Footer />
       <SiteSettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
+      <ManualRegistrationDialog
+        open={manualRegistrationOpen}
+        onOpenChange={setManualRegistrationOpen}
+        courses={(availabilityQuery.data ?? []).map((course) => ({
+          course_id: course.course_id,
+          name: course.name,
+          starts_at: course.starts_at,
+          is_active: course.is_active,
+          remaining: course.remaining,
+        }))}
+        isQrEnabled={isQrEnabled}
+        onSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+          void queryClient.invalidateQueries({ queryKey: ['admin_availability'] });
+        }}
+      />
 
       <Dialog open={exportFullDialogOpen} onOpenChange={setExportFullDialogOpen}>
         <DialogContent className="sm:max-w-md">
